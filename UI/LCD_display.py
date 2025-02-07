@@ -11,7 +11,7 @@ TFT_DC   = 33  # Data/Command (DC)
 max_baud = 40000000
 min_baud = 20000000
 spi = SPI(1, baudrate=min_baud, polarity=0, phase=0, sck=Pin(TFT_SCK), mosi=Pin(TFT_MOSI)) # initialize SPI
-display = ili934x.ILI9341(spi, cs=Pin(5), dc=Pin(33), rst=Pin(4)) # initialize display
+display = ili934x.ILI9341(spi, cs=Pin(5), dc=Pin(33), rst=Pin(4), w=320, h=240, r=0) # initialize display
 
 print("LCD Initialized Successfully!")
 
@@ -65,3 +65,4 @@ while True:
     update_display()
     system_runtime += 1  # Simulate runtime increasing
     time.sleep(1)
+
