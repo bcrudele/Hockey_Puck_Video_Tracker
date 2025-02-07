@@ -8,39 +8,60 @@ TFT_SCK  = 14  # Clock (SCK)
 TFT_CS   = 5   # Chip Select (CS)
 TFT_RST  = 4   # Reset (RST)
 TFT_DC   = 33  # Data/Command (DC)
-
-spi = SPI(1, baudrate=20000000, polarity=0, phase=0, sck=Pin(TFT_SCK), mosi=Pin(TFT_MOSI)) # initialize SPI
+max_baud = 40000000
+min_baud = 20000000
+spi = SPI(1, baudrate=min_baud, polarity=0, phase=0, sck=Pin(TFT_SCK), mosi=Pin(TFT_MOSI)) # initialize SPI
 display = ili934x.ILI9341(spi, cs=Pin(5), dc=Pin(33), rst=Pin(4)) # initialize display
 
 print("LCD Initialized Successfully!")
 
-# Set up default values for the display
-puck_position = (150, 120)  # Example puck position (x, y)  (get rid of this later)
-frame_rate = 30  # Example frame rate in FPS                (get rid of this later)
-battery_level = 85  # Example battery level in percentage   (get rid of this later)
+locked = 0 # [binary] locked/locked lost (from laptop)
+servo_movement = 0 # [range (-2->2)] L/R movement + Servo Speed (ie. fast left servo movement -> -2)
+recording = 0      # [binary] recording active
+system_temp = 72 # [analog range] Temperature from analog thermostat circuit
+system_runtime = 0 # [s] time run
 
-# 
+# Color List
+WHITE = ili934x.color565(255, 255, 255)
+BLACK = ili934x.color565(0, 0, 0)
+RED = ili934x.color565(255, 0, 0)
+GREEN = ili934x.color565(0, 255, 0)
+BLUE = ili934x.color565(0, 0, 255)
 
-# Function to update the GUI with new information
-def update_gui():
-    # Display puck position
-    display.text(f"Puck Position: X={puck_position[0]} Y={puck_position[1]}", 10, 20, color=ili934x.color565(255, 255, 255))
-    display.pixel(puck_position[0], puck_position[1], color=ili934x.color565(255,255,255))
-    #display.fill_rectangle(puck_position[0], puck_position[1], puck_position[0],puck_position[1], color=ili934x.color565(255,255,255)) [has bugs]
-    # Display frame rate
-    display.text(f"Frame Rate: {frame_rate} FPS", 10, 40, color=ili934x.color565(255, 255, 255))
+### Coordinate syst. ###
+b_start = 10
+b_start_h = 40
+b_width = 215
+b_height = 10
+b_sep = 30
+right_al = b_width - 60
+###
 
-    # Display battery level
-    display.text(f"Battery: {battery_level}%", 10, 60, color=ili934x.color565(255, 255, 255))
+def draw_gui():
+    display.text("System Status", 80, 10, WHITE)
+    
+    # Create black bars
+    for bar in range(0,5):
+        display.fill_rectangle(b_start, b_start_h + (b_sep * bar) , b_width, b_height, BLACK)
+        
+    display.text("Locked:", b_start, 40, WHITE)
+    display.text("Servo:", b_start, 70, WHITE)
+    display.text("Recording:", b_start, 100, WHITE)
+    display.text("Sys Temp:", b_start, 130, WHITE)
+    display.text("Runtime:", b_start, 160, WHITE)
 
-# Main loop to simulate updates
+def update_display():
+    display.text("Locked" if locked else "Unlocked", right_al, 40, GREEN if locked else RED)
+    display.text(str(servo_movement), right_al, 70, WHITE)
+    display.text("ON" if recording else "OFF", right_al, 100, GREEN if recording else RED)
+    display.text(f"{system_temp}F", right_al, 130, WHITE)
+    display.text(f"{system_runtime}s", right_al, 160, WHITE)
+
+# Initialize GUI
+draw_gui()
+
+# main loop
 while True:
-    update_gui()
-    time.sleep(0.5)  # Update every second
-
-    # Simulate changes to the values
-    puck_position = (puck_position[0] + 1, puck_position[1] + 1)  # Move puck position
-    if frame_rate < 60:
-        frame_rate += 1  # Increase frame rate for simulation
-    if battery_level > 0:
-        battery_level -= 1  # Simulate battery draining
+    update_display()
+    system_runtime += 1  # Simulate runtime increasing
+    time.sleep(1)
