@@ -8,8 +8,8 @@ class Servo:
     def __init__(self, pin):
         self.pwm = PWM(Pin(pin), freq=50)
     
-    def set_angle(self, angle):
+    def set_angle(self, angle, curr_angle):
         pulse_width = map_value(angle, 0, 180, 500, 2600)  # Convert to microseconds
         duty = int((pulse_width / 20000) * 1023)  # Convert to duty cycle formula
         self.pwm.duty(duty)
-        time.sleep(2)  # final prod. can't wait
+        time.sleep((abs(curr_angle - angle) / 180) * 3)  # sleep time based on angle (0-3 seconds)
