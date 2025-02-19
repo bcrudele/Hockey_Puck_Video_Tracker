@@ -3,6 +3,7 @@ import time
 import ili934x
 import _thread
 from servo_driver import Servo
+import uart_driver as UDR
 
 servo = Servo(15)  # set servo to pin 15
 
@@ -41,6 +42,11 @@ b_sep = 30
 right_al = b_width - 60
 ###
 
+###
+BAUD = 9600
+RX_PIN = 7
+###
+
 def draw_gui():
     display.text("System Status", 80, 10, WHITE)
     
@@ -77,9 +83,27 @@ def update_servo():
         if angle == 210:
             angle = 0
 
+def update_command(uart, led):
+    while True:
+        command = UDR.uart_com(uart)
+        if command in ('0', '1'):
+            led.value(int(command)) 
+        #time.sleep(1)  # Small delay to avoid CPU overload
+
+# LED for TX test
+led = Pin(12, Pin.OUT)
+
+# Initialize UART
+uart = UDR.uart_init(BAUD,RX_PIN)
 # Initialize GUI
 draw_gui()
 time.sleep(2) # decrease boot errors?
 _thread.start_new_thread(update_display, ())
 time.sleep(0) # decrease boot errors?
 _thread.start_new_thread(update_servo, ())
+#_thread.start_new_thread(update_command, (uart, led,))
+
+#update_command(uart, led)
+
+# Next time: Make servo motion controllable via PC
+
