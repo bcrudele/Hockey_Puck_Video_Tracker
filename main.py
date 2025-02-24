@@ -35,46 +35,60 @@ RED = ili934x.color565(255, 0, 0)
 GREEN = ili934x.color565(0, 255, 0)
 BLUE = ili934x.color565(0, 0, 255)
 
-### Coordinate syst. ###
-b_start = 10
-b_start_h = 40
-b_width = 215
-b_height = 10
-b_sep = 30
-right_al = b_width - 60
-###
-
 ###
 BAUD = 9600
 RX_PIN = 7
 ###
 
+# Constants for display layout
+b_start = 10
+b_start_h = 40
+b_width = 215
+b_height = 20
+b_sep = 30
+right_al = b_width - 60
+status_area_height = b_height * 5 + b_sep * 4  # Total height of the status area
+bg_color = BLACK
+text_color = WHITE
+
 def draw_gui():
+    # Title
     display.text("System Status", 80, 10, WHITE)
     
-    # Create black bars
-    for bar in range(0, 5):
-        display.fill_rectangle(b_start, b_start_h + (b_sep * bar), b_width, b_height, BLACK)
-        
-    display.text("Locked:", b_start, 40, WHITE)
-    display.text("Servo:", b_start, 70, WHITE)
-    display.text("Recording:", b_start, 100, WHITE)
-    display.text("Sys Temp:", b_start, 130, WHITE)
-    display.text("Runtime:", b_start, 160, WHITE)
+    # Background
+    display.fill_rectangle(b_start, b_start_h - 10, b_width, status_area_height, bg_color)
+    
+    # Draw labels
+    display.text("Locked:", b_start, 40, text_color)
+    display.text("Servo:", b_start, 70, text_color)
+    display.text("Recording:", b_start, 100, text_color)
+    display.text("Sys Temp:", b_start, 130, text_color)
+    display.text("Runtime:", b_start, 160, text_color)
 
 def update_display():
-    print("update_display thread active")
+    print("Display thread active")
     global servo_movement
+    global recording
+    global locked
     system_runtime = 0
     while True:
-        display.text("Locked" if locked else "Unlocked", right_al, 40, GREEN if locked else RED)
-        display.text(f"{servo_movement}", right_al, 70, WHITE)
-        display.text("ON" if recording else "OFF", right_al, 100, GREEN if recording else RED)
-        display.text(f"{system_temp}F", right_al, 130, WHITE)
-        display.text(f"{system_runtime}s", right_al, 160, WHITE)
-        system_runtime += 1  # simulate runtime increasing
-        time.sleep(1)
+        # Clear changing items
+        display.fill_rectangle(right_al, 40, b_width - right_al, b_height, bg_color)  
+        display.fill_rectangle(right_al, 70, b_width - right_al, b_height, bg_color) 
+        display.fill_rectangle(right_al, 100, b_width - right_al, b_height, bg_color)  
+        display.fill_rectangle(right_al, 130, b_width - right_al, b_height, bg_color) 
+        display.fill_rectangle(right_al, 160, b_width - right_al, b_height, bg_color) 
         
+        # Draw the new values
+        display.text("Locked" if locked else "Unlocked", right_al, 40, GREEN if locked else RED)
+        display.text(f"{servo_movement}", right_al, 70, text_color)
+        display.text("ON" if recording else "OFF", right_al, 100, GREEN if recording else RED)
+        display.text(f"{system_temp}F", right_al, 130, text_color)
+        display.text(f"{system_runtime}s", right_al, 160, text_color)
+        
+        system_runtime += 1  # time increase
+        time.sleep(1)
+
 def update_servo(angle):
     global servo_movement  # access the global variable
     curr_angle = servo_movement
@@ -82,8 +96,10 @@ def update_servo(angle):
     servo.set_angle(angle, curr_angle)
 
 def update_command(uart):
-    print("update_command thread active")
+    print("Command thread active")
     global servo_movement
+    global recording
+    global locked
     while True:
         try:
             command = UDR.uart_com(uart)
@@ -96,6 +112,14 @@ def update_command(uart):
                 command = int(command)
                 if MIN_SERVO_ANGLE <= command <= MAX_SERVO_ANGLE:
                     update_servo(command)
+            elif command == 'rON':
+                recording = 1 # recording on
+            elif command == 'rOFF':
+                recording = 0 # recording off
+            elif command == 'lON':
+                locked = 1 # lock found
+            elif command == 'lOFF':
+                locked = 0 # lock lost
             else:
                 print(f"Invalid command received: {command}") # for bad commands
                 
