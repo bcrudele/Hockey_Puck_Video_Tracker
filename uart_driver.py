@@ -21,16 +21,18 @@ def uart_init(BAUD, RX_PIN):
     return uart
 
 def uart_com(uart):
-    if uart.any():  # Check if data is available to read
-        command = uart.read(1)  # Read 1 byte
-        
-        # Check if a valid byte was received
-        if command:
-            # Convert the byte to a string
-            command_str = chr(command[0])  # Convert byte to character
+    command_str = ""
+    
+    while True:
+        if uart.any():  # Check if data is available to read
+            byte = uart.read(1)  # Read 1 byte
             
-            print(f"Received: {command_str}")
-            # uart.write() may need later "LED ON"
-            
-            return command_str
+            if byte:
+                char = chr(byte[0])  # Convert byte to character
+                
+                if char == '\n':  # End of command
+                    #print(f"UART: {command_str}") # for debugging
+                    return command_str.strip()
+                
+                command_str += char
 

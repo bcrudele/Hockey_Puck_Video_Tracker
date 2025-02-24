@@ -6,6 +6,8 @@ from servo_driver import Servo
 import uart_driver as UDR
 
 servo = Servo(15)  # set servo to pin 15
+MAX_SERVO_ANGLE = 180
+MIN_SERVO_ANGLE = 0
 
 # Define SPI Pins for ESP32 Feather V2
 TFT_MOSI = 13  # Data (MOSI)
@@ -72,38 +74,36 @@ def update_display():
         system_runtime += 1  # simulate runtime increasing
         time.sleep(1)
         
-def update_servo():
+def update_servo(angle):
     global servo_movement  # access the global variable
-    angle = 0 # this is the var we will set to move servo (0-180 degrees)
+    curr_angle = servo_movement
+    servo.set_angle(angle, curr_angle)
+
+def update_command(uart):
+    global servo_movement
     while True:
-        curr_angle = servo_movement  # record current angle
-        servo_movement = angle  # Update servo_movement with the requested angle
-        servo.set_angle(angle, curr_angle)
-        angle += 1
-        if angle == 210:
-            angle = 0
-
-def update_command(uart, led):
-    while True:
-        command = UDR.uart_com(uart)
-        if command in ('0', '1'):
-            led.value(int(command)) 
-        #time.sleep(1)  # Small delay to avoid CPU overload
-
-# LED for TX test
-led = Pin(12, Pin.OUT)
-
+        try:
+            command = UDR.uart_com(uart)
+            if command is None:
+                continue  # when no commands
+            
+            command = command.strip() # remove spaces (just incase)
+            
+            if command.isdigit():  # valid number check
+                command = int(command)
+                if MIN_SERVO_ANGLE <= command <= MAX_SERVO_ANGLE:
+                    update_servo(command)
+            else:
+                print(f"Invalid command received: {command}") # for bad commands
+                
+        except Exception as e:
+            print(f"Error in update_command: {e}") # error catcher
+        
 # Initialize UART
 uart = UDR.uart_init(BAUD,RX_PIN)
 # Initialize GUI
 draw_gui()
 time.sleep(2) # decrease boot errors?
 _thread.start_new_thread(update_display, ())
-time.sleep(0) # decrease boot errors?
-_thread.start_new_thread(update_servo, ())
-#_thread.start_new_thread(update_command, (uart, led,))
-
-#update_command(uart, led)
-
-# Next time: Make servo motion controllable via PC
-
+_thread.start_new_thread(update_command, (uart,))
+update_servo(MAX_SERVO_ANGLE//2) # start pos.
