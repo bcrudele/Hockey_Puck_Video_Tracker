@@ -13,6 +13,4 @@ class Servo:
         duty = int((pulse_width / 20000) * 1023)  # Convert to duty cycle formula
         self.pwm.duty(duty)
         print(f"Servo {angle} degrees")
-        time.sleep((abs(curr_angle - angle) / 180) * 3)  # sleep time based on angle (0-3 seconds)
-
-
+        #time.sleep((abs(curr_angle - angle) / 180) * 3)  # sleep time based on angle (0-3 seconds)
