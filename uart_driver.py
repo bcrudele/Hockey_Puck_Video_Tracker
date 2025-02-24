@@ -1,4 +1,5 @@
 import machine
+import time
 from machine import Pin, UART               
 
 def uart_test(RX_PIN):
@@ -35,4 +36,4 @@ def uart_com(uart):
                     return command_str.strip()
                 
                 command_str += char
-
+        time.sleep(0.1) # so GUI can update

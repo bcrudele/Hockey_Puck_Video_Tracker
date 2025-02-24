@@ -23,7 +23,7 @@ display = ili934x.ILI9341(spi, cs=Pin(5), dc=Pin(33), rst=Pin(4), w=320, h=240, 
 print("LCD Initialized Successfully!")
 
 locked = 0  # [binary] locked/locked lost (from laptop)
-servo_movement = 0  # [range (-2->2)] L/R movement + Servo Speed (ie. fast left servo movement -> -2)
+servo_movement = MAX_SERVO_ANGLE//2
 recording = 0  # [binary] recording active
 system_temp = 72  # [analog range] Temperature from analog thermostat circuit
 system_runtime = 0  # [s] time run
@@ -63,6 +63,7 @@ def draw_gui():
     display.text("Runtime:", b_start, 160, WHITE)
 
 def update_display():
+    print("update_display thread active")
     global servo_movement
     system_runtime = 0
     while True:
@@ -80,6 +81,7 @@ def update_servo(angle):
     servo.set_angle(angle, curr_angle)
 
 def update_command(uart):
+    print("update_command thread active")
     global servo_movement
     while True:
         try:
@@ -98,12 +100,14 @@ def update_command(uart):
                 
         except Exception as e:
             print(f"Error in update_command: {e}") # error catcher
-        
-# Initialize UART
-uart = UDR.uart_init(BAUD,RX_PIN)
+            
 # Initialize GUI
 draw_gui()
 time.sleep(2) # decrease boot errors?
 _thread.start_new_thread(update_display, ())
+
+# Initialize UART
+uart = UDR.uart_init(BAUD,RX_PIN)
 _thread.start_new_thread(update_command, (uart,))
+
 update_servo(MAX_SERVO_ANGLE//2) # start pos.
