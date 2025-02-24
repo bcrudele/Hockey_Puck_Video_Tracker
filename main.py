@@ -78,6 +78,7 @@ def update_display():
 def update_servo(angle):
     global servo_movement  # access the global variable
     curr_angle = servo_movement
+    servo_movement = angle # set LCD screen with new value
     servo.set_angle(angle, curr_angle)
 
 def update_command(uart):
