@@ -1,6 +1,6 @@
 import serial
 
-COM_PORT = "COM4"
+COM_PORT = "COM3"
 
 ser = serial.Serial(COM_PORT, 9600, timeout=1)
 
