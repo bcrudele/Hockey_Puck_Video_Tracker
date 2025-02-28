@@ -68,3 +68,18 @@ class trackHSV():
         self.cap.release()
         cv.destroyAllWindows()
 
+    def calculate_speed(self):
+        if len(self.position_history) < 2:
+            return 0
+        speeds = []
+        for i in range(1, len(self.position_history)):
+            x1, y1 = self.position_history[i - 1]
+            x2, y2 = self.position_history[i]
+            distance = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+            speeds.append(distance)
+            
+        print(speeds)
+        return np.mean(speeds) if speeds else 0.0
+    
+        
+
