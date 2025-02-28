@@ -1,10 +1,10 @@
 import numpy as np
 import cv2 as cv
-
+from collections import deque # using instead of just push and pop bc better time complexity w ops (could be negligible but just using anyway)
 direction = [0,0]
-
+position_history = deque([])
 # Setup camera
-cap = cv.VideoCapture(0)
+cap = cv.VideoCapture(1) # TO MAKE CAMERA WORK ON NIKI COMPUTER: USE 1 INSTEAD OF 0
 width = cap.get(cv.CAP_PROP_FRAME_WIDTH)
 height = cap.get(cv.CAP_PROP_FRAME_HEIGHT)
 bound = 0.10
@@ -41,6 +41,10 @@ while True:
         if M["m00"] != 0:
             cx = int(M["m10"] / M["m00"])
             cy = int(M["m01"] / M["m00"])
+            point = (cx, cy)
+            position_history.append(point)
+            if (len(position_history) > 10):
+                position_history.popleft()
             cv.circle(frame, (cx, cy), 5, (0, 255, 0), -1)
             cv.putText(frame, f"({cx}, {cy})", (cx + 10, cy - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2) 
             if (cx > width_lower_bound):
