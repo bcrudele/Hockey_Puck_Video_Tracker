@@ -25,6 +25,8 @@ def process_video(video_path, model="yolov5s.pt", debuff_en=False, debuff_range=
     # video dims:
     width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    out = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 30, (int(width), int(height)))
+
     print(f"Video dimensions: {width}x{height}")
     width_lower_bound = width - (bound * width)
     width_upper_bound = 0 + (bound * width)
@@ -61,6 +63,7 @@ def process_video(video_path, model="yolov5s.pt", debuff_en=False, debuff_range=
                 x_avg_list.append(x_avg)
                 # print(f"Person {i} is at: {x_avg}")
 
+        out.write(frame)
         print_info(x_avg_list, width_lower_bound, width_upper_bound)
             
         # debug gui: enable with [gui]
@@ -69,6 +72,7 @@ def process_video(video_path, model="yolov5s.pt", debuff_en=False, debuff_range=
             if cv2.waitKey(1) & 0xFF == ord('q'):  # exit gui
                 break
 
+    out.release()             
     cap.release()
     cv2.destroyAllWindows()
 
