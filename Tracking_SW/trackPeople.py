@@ -1,44 +1,55 @@
-from transformers import DetrImageProcessor, DetrForObjectDetection
-import torch
-from PIL import Image, ImageDraw
+import cv2
+from ultralytics import YOLO  # pip install ultralytics
 
-# def draw_boxes_on_image(boxes, image, output_path="output_image_with_boxes.jpg"):
+model = YOLO("yolov5s.pt")  # yolov5s is a smaller model than detr
 
-#     draw = ImageDraw.Draw(image)
+# initialize camera:
+cap = cv2.VideoCapture(0)  # might have to change camera '#' later
+width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+print("Camera dimensions:", (width, height))
 
-# 	# for each box, draw a rect:
-#     for box in boxes:	
-#         draw.rectangle(box, outline="red", width=3)
+# variables:
+frame_count = 0
+gui = False             # enables GUI
+debug = False           # enables model results to terminal
+debuff_en = False       # enable overload protection
+debuff_range = 1        # process every x frames
 
-#     image.save(output_path)
-#     print(f"Image with boxes saved as {output_path}")
+# start reading frames,
+while True:
 
-# image path
-image_path = "ishl.png"
-image = Image.open(image_path)
-image = image.convert('RGB')
+    ret, frame = cap.read() # get each frame,
 
-# you can specify the revision tag if you don't want the timm dependency
-processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50", revision="no_timm")
-model = DetrForObjectDetection.from_pretrained("facebook/detr-resnet-50", revision="no_timm")
+    if not ret: # if camera gets disconnected/failure,
+        print("Failed to grab frame")
+        break
 
-inputs = processor(images=image, return_tensors="pt")
-outputs = model(**inputs)
+    # process every xth frame to reduce load, [debuff_en]
+    if debuff_en:
+        frame_count += 1
+        if frame_count % debuff_range != 0:
+            continue
 
-# convert outputs (bounding boxes and class logits) to COCO API
-# let's only keep detections with score > 0.9
-target_sizes = torch.tensor([image.size[::-1]])
-results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=0.9)[0]
+    # use YOLO model:
+    results = model(frame, verbose=debug) # turn on verbose with [debug]
+    boxes = results[0].boxes    # get results,
+    labels = boxes.cls          # labels found
+    confidences = boxes.conf    # confidence numbers
 
-for score, label, box in zip(results["scores"], results["labels"], results["boxes"]):
-    box = [round(i, 2) for i in box.tolist()]
-    print(
-            f"Detected {model.config.id2label[label.item()]} with confidence "
-            f"{round(score.item(), 3)} at location {box}"
-    )
+    # filter out other objects detected, class 0 -> people in COCO
+    for i in range(len(boxes)):
+        if labels[i] == 0:  # if a person,
+            x1, y1, x2, y2 = boxes.xyxy[i].cpu().numpy()  # unpack the coordinates
+            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 3) # draw the rect.
+            x_avg = round((x1+x2)/2,2)  # middle x coordinate
+            print(f"Person {i} is at: {x_avg}")
 
-# # create list of boxes
-# boxes = [box.tolist() for box in results["boxes"]]
+    # debug gui: enable with [gui]
+    if gui:
+        cv2.imshow("Debug GUI", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'): # exit gui
+            break
 
-# # draw boxes:
-# draw_boxes_on_image(boxes, image=image, output_path="output_image_with_boxes.jpg")
+cap.release()
+cv2.destroyAllWindows()
