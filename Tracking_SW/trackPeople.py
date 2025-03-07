@@ -1,7 +1,17 @@
 import cv2
 from ultralytics import YOLO  # pip install ultralytics
 
-def process_video(video_path, model="yolov5s.pt", debuff_en=False, debuff_range=1, gui=True, debug=False):
+def print_info(x_avg_list, width_lower_bound, width_upper_bound):
+        if len(x_avg_list) != 0:
+            average_x = round(sum(x_avg_list) / len(x_avg_list),2)
+            people_in_frame = len(x_avg_list)
+            print(f"People in Frame: {people_in_frame} | x_avg -> {average_x}")
+            if (average_x > width_lower_bound):
+                print("move right")
+            elif (average_x < width_upper_bound):
+                print("move left")
+
+def process_video(video_path, model="yolov5s.pt", debuff_en=False, debuff_range=1, gui=True, debug=False, bound=0.1):
     
     # load YOLO
     model = YOLO(model)
@@ -16,6 +26,9 @@ def process_video(video_path, model="yolov5s.pt", debuff_en=False, debuff_range=
     width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     print(f"Video dimensions: {width}x{height}")
+    width_lower_bound = width - (bound * width)
+    width_upper_bound = 0 + (bound * width)
+    print(f"width lower = {width_lower_bound}, width upper = {width_upper_bound} ")
 
     frame_count = 0
     while True:
@@ -47,10 +60,9 @@ def process_video(video_path, model="yolov5s.pt", debuff_en=False, debuff_range=
                 x_avg = round((x1 + x2) / 2, 2)  # average x-coordinate of each person
                 x_avg_list.append(x_avg)
                 # print(f"Person {i} is at: {x_avg}")
-        average_x = round(sum(x_avg_list) / len(x_avg_list),2)
-        people_in_frame = len(x_avg_list)
-        print(f"People in Frame: {people_in_frame} | x_avg -> {average_x}")
 
+        print_info(x_avg_list, width_lower_bound, width_upper_bound)
+            
         # debug gui: enable with [gui]
         if gui:
             cv2.imshow("Video Processing", frame)
@@ -60,7 +72,7 @@ def process_video(video_path, model="yolov5s.pt", debuff_en=False, debuff_range=
     cap.release()
     cv2.destroyAllWindows()
 
-def process_camera(camera=0, model="yolov5s.pt", debuff_en=False, debuff_range=1, gui=True, debug=False):
+def process_camera(camera=0, model="yolov5s.pt", debuff_en=False, debuff_range=1, gui=True, debug=False, bound=0.1):
 
     model = YOLO(model)  # yolov5s is a smaller model than detr
 
@@ -68,7 +80,10 @@ def process_camera(camera=0, model="yolov5s.pt", debuff_en=False, debuff_range=1
     cap = cv2.VideoCapture(camera)  # might have to change camera '#' later
     width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    print("Camera dimensions:", (width, height))
+    width_lower_bound = width - (bound * width)
+    width_upper_bound = 0 + (bound * width)
+    print("Camera dimensions:", (width, height)) 
+    print(f"width lower = {width_lower_bound}, width upper = {width_upper_bound} ")
 
     # variables:
     frame_count = 0
@@ -105,10 +120,8 @@ def process_camera(camera=0, model="yolov5s.pt", debuff_en=False, debuff_range=1
                 x_avg_list.append(x_avg)
                 x_avg = round((x1+x2)/2,2)  # middle x coordinate
                 # print(f"Person {i} is at: {x_avg}")
-        average_x = round(sum(x_avg_list) / len(x_avg_list),2)
-        people_in_frame = len(x_avg_list)
-        print(f"People in Frame: {people_in_frame} | x_avg -> {average_x}")
-        
+        print_info(x_avg_list, width_lower_bound, width_upper_bound)
+
         # debug gui: enable with [gui]
         if gui:
             cv2.imshow("Debug GUI", frame)
@@ -119,6 +132,6 @@ def process_camera(camera=0, model="yolov5s.pt", debuff_en=False, debuff_range=1
     cv2.destroyAllWindows()
 
 # start operation:
-process_camera()
+process_camera(bound=0.25)
 video_path = './Tracking_SW/archive/faceoff.mov'
-process_video(video_path)
+process_video(video_path, bound=0.25)
