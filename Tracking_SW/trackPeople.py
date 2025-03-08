@@ -2,7 +2,7 @@ import cv2
 from ultralytics import YOLO  # pip install ultralytics
 
 def print_info(x_avg_list, width_lower_bound, width_upper_bound):
-    """"
+    """
     Prints:
     - if camera should move left/right
     - people in frame
@@ -45,14 +45,14 @@ def bound_set(width, bound):
     print(f"width lower = {width_lower_bound}, width upper = {width_upper_bound} ")
     return width_lower_bound, width_upper_bound
 
-def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=False, frame_skip=5, gui=True, debug=False, bound=0.1):
+def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_skip=5, gui=True, debug=True, bound=0.1):
     """
     works for both camera and video input!
     video_path: 0 for camera, or path to video file
     frame_skip_en: if True, processes every xth frame (helps performance)
     frame_skip: the number of frames to skip
     gui: shows video processing
-    debug: prints model info (too much info)
+    debug: print general info (toggled with debug)
     """
     # load YOLO
     model = YOLO(model)
@@ -86,7 +86,7 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=False, frame_s
                 continue
 
         # gather data,
-        results = model(frame, verbose=debug)
+        results = model(frame, verbose=False)  # change verbose to True if you want model info per process (too much)
         boxes = results[0].boxes    # get the boxes
         labels = boxes.cls          # get labels
         confidences = boxes.conf    # get confidence scores
@@ -104,7 +104,8 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=False, frame_s
 
         # write to output,
         out.write(frame)
-        print_info(x_avg_list, width_lower_bound, width_upper_bound)
+        if debug:
+            print_info(x_avg_list, width_lower_bound, width_upper_bound)
             
         # debug gui: enable with [gui]
         if gui:
@@ -121,4 +122,4 @@ if __name__ == '__main__':
     # start operation:
     # video_path = './Tracking_SW/archive/faceoff.mov'
     video_path = 0
-    process_video(video_path, bound=0.25, frame_skip_en=True, frame_skip=5)
+    process_video(video_path, frame_skip_en=True, frame_skip=5, gui=True, debug=True, bound=0.25)
