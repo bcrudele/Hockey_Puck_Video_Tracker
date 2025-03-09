@@ -1,5 +1,6 @@
 import cv2
 from ultralytics import YOLO  # pip install ultralytics
+from send_data import send_command # to send serial data
 
 def print_info(x_avg_list, width_lower_bound, width_upper_bound):
     """
@@ -45,6 +46,37 @@ def bound_set(width, bound):
     print(f"width lower = {width_lower_bound}, width upper = {width_upper_bound} ")
     return width_lower_bound, width_upper_bound
 
+def determine_angle(angle, x_avg_list, width_lower_bound, width_upper_bound, cam_width):
+    if len(x_avg_list) != 0:
+        average_x = round(sum(x_avg_list) / len(x_avg_list),2)
+        zone = (cam_width - width_lower_bound) // 3 # each speed zone
+        Rzone0 = width_lower_bound
+        Rzone1 = Rzone0 + zone 
+        Rzone2 = Rzone1 + zone
+        Lzone0 = width_upper_bound
+        Lzone1 = Lzone0 - zone 
+        Lzone2 = Lzone1 - zone
+        if (Rzone1 > average_x > Rzone0):
+            print("RZONE0")
+            angle = angle - 2
+        elif (Rzone2 > average_x > Rzone1):
+            print("RZONE1")
+            angle = angle - 5
+        elif (average_x > Rzone2):
+            print("RZONE2")
+            angle = angle - 10
+        elif (Lzone1 < average_x < Lzone0):
+            print("LZONE0")
+            angle = angle + 2
+        elif (Lzone2 < average_x < Lzone1):
+            print("LZONE1")
+            angle = angle + 5
+        elif (average_x < Lzone2):
+            print("LZONE2")
+            angle = angle + 10
+        
+    return angle
+
 def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_skip=5, gui=True, debug=True, bound=0.1):
     """
     works for both camera and video input!
@@ -62,7 +94,7 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
 
     # check if video is opened successfully,
     if check_video(cap) == False:
-        print(f"Error: Couldn't open {type} file.")
+        print(f"Error: Couldn't open file.")
         return
     
     # output processing video,
@@ -72,6 +104,7 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
     width_lower_bound, width_upper_bound = bound_set(width, bound)
 
     frame_count = 0
+    angle = 90 # start at this angle
     while True:
         ret, frame = cap.read()  # get the frame
 
@@ -104,6 +137,14 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
 
         # write to output,
         out.write(frame)
+
+        # calculate new angle
+        angle = determine_angle(angle, x_avg_list, width_lower_bound, width_upper_bound, width)
+
+        # send command:
+        send_command(angle)
+        
+        # debug terminal stuff: enable with [debug]
         if debug:
             print_info(x_avg_list, width_lower_bound, width_upper_bound)
             
@@ -122,4 +163,5 @@ if __name__ == '__main__':
     # start operation:
     # video_path = './Tracking_SW/archive/faceoff.mov'
     video_path = 0
-    process_video(video_path, frame_skip_en=True, frame_skip=5, gui=True, debug=True, bound=0.25)
+    # video_path = './archive/faceoff.mov'
+    process_video(video_path, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4)
