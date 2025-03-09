@@ -74,6 +74,12 @@ def determine_angle(angle, x_avg_list, width_lower_bound, width_upper_bound, cam
         elif (average_x < Lzone2):
             print("LZONE2")
             angle = angle + 10
+
+        # dont over-correct:
+        if angle > 180:
+            angle = 180
+        elif angle < 0:
+            angle = 0
         
     return angle
 
@@ -98,19 +104,22 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
         return
     
     # output processing video,
-    out = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 30, (int(width), int(height)))
+    box_render = cv2.VideoWriter('box_render.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 10, (int(width), int(height)))
+    original_film = cv2.VideoWriter('original_film.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 20, (int(width), int(height)))
 
     # set bounds for camera movement,
     width_lower_bound, width_upper_bound = bound_set(width, bound)
 
     frame_count = 0
-    angle = 90 # start at this angle
+    current_angle = 90 # start at this angle
     while True:
         ret, frame = cap.read()  # get the frame
 
         if not ret:  # if video ends or fails to grab frame,
             print("Failed to grab frame")
             break
+
+        original_film.write(frame)
 
         # process every xth frame to reduce load, enable with [frame_skip_en & frame_skip],
         if frame_skip_en:
@@ -136,14 +145,18 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
                 # print(f"Person {i} is at: {x_avg}")
 
         # write to output,
-        out.write(frame)
+        box_render.write(frame)
 
         # calculate new angle
-        angle = determine_angle(angle, x_avg_list, width_lower_bound, width_upper_bound, width)
+        angle = determine_angle(current_angle, x_avg_list, width_lower_bound, width_upper_bound, width)
 
-        # send command:
-        send_command(angle)
-        
+        # prevent spam of the same angle,
+        if angle != current_angle:
+            current_angle = angle
+            # send command:
+            # send_command(angle)
+            print(f"Angle: {angle}") # for testing
+
         # debug terminal stuff: enable with [debug]
         if debug:
             print_info(x_avg_list, width_lower_bound, width_upper_bound)
@@ -155,7 +168,8 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
                 break
     
     # release everything,
-    out.release()             
+    box_render.release() 
+    original_film.release()             
     cap.release()
     cv2.destroyAllWindows()
 
