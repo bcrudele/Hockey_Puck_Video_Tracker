@@ -65,6 +65,7 @@ class trackHSV():
             cv.imshow("Frame", frame)
             if cv.waitKey(1) & 0xFF == ord('q'):
                 break
+            speed = self.calculate_speed()
         self.cap.release()
         cv.destroyAllWindows()
 
@@ -75,10 +76,12 @@ class trackHSV():
         for i in range(1, len(self.position_history)):
             x1, y1 = self.position_history[i - 1]
             x2, y2 = self.position_history[i]
-            distance = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-            speeds.append(distance)
-            
-        print(speeds)
+            distancex = np.abs(x2 - x1)
+            distancey = np.abs(y2 - y1)
+            distance2d = np.sqrt(distancex ** 2 + distancey ** 2) # not sure if need bc we are only traveling in x direction
+            speeds.append(distancex)
+
+        #print(speeds)
         return np.mean(speeds) if speeds else 0.0
     
         
