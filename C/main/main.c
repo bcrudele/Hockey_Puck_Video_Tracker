@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include "uart.h"
 #include "servo.h"
+#include "lcd.c" // make this a header
 
 void app_main(void) {
     uart_config();
@@ -15,4 +16,5 @@ void app_main(void) {
         printf("%s", command);
         set_servo(comp, atoi(command));
     }
+    //lcd();
 }
