@@ -572,6 +572,7 @@ void timer_callback(void* arg) {
 
     // Clear the buffer and draw GUI elements
     for (int y = 0; y < 240; y += PARALLEL_LINES) {
+        if (frame < 6) {
         // Clear the buffer
         for (int i = 0; i < 320 * PARALLEL_LINES; i++) {
             lines[calc_line][i] = BACKGROUND_COLOR; // Black background
@@ -609,19 +610,48 @@ void timer_callback(void* arg) {
             draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TIME:", TEXT_COLOR, 2);
             draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 4, system_runtime, TEXT_COLOR, 2); // White number
         }
-
+        frame++;
         // Send the lines to the display
         if (sending_line != -1) send_line_finish(spi);
         sending_line = calc_line;
         calc_line = (calc_line == 1) ? 0 : 1;
         send_lines(spi, y, lines[sending_line]);
+        }
+        else if (frame == 6){
+            calc_line = 0;
+            draw_rectangle(lines[calc_line], GUI_X+3, GUI_Y, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
+
+            // draw_text(lines[0], GUI_NAME_OFFSET, 0, "SERVO:", TEXT_COLOR, 2);
+            // draw_number(lines[0], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 1, servo_movement, TEXT_COLOR, 2); // White number
+
+            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "LOCK:", TEXT_COLOR, 2);
+            if (lock) { draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "PAIRED", GREEN, 2); }
+            else { draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "LOST", RED, 2); }
+            send_lines(spi, PARALLEL_LINES, lines[0]); // Only send the updated line
+            frame++;
+        }
+        else if (frame == 7) {
+            
+            calc_line = 1;
+            draw_rectangle(lines[calc_line], GUI_X+3, PARALLEL_LINES * 1, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
+            
+            //         // Update SERVO variable display (below LOCK)
+            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "SERVO:", TEXT_COLOR, 2);
+            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES, servo_movement, TEXT_COLOR, 2);
+
+            send_lines(spi, PARALLEL_LINES * 2, lines[calc_line]); // Only send the updated line
+            frame = 6;
+
+
+            vTaskDelay(pdMS_TO_TICKS(100)); // critical!
+            
+        }
     }
 
     // Update the variables
     if (lock) { lock = false; }
     else { lock = true; }
-    servo_movement++;
-    // Optionally, reset other variables like recording, temp, and runtime here
+    //servo_movement++;
 }
 
 // Setup the periodic timer

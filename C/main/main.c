@@ -9,12 +9,13 @@
 #include "lcd.c" // make this a header
 
 void app_main(void) {
-    // uart_config();
-    // mcpwm_cmpr_handle_t comp = servo_init();
-    // while (true) {
-    //     char* command = uart_com();
-    //     printf("%s", command);
-    //     set_servo(comp, atoi(command));
-    // }
+    uart_config();
+    mcpwm_cmpr_handle_t comp = servo_init();
     lcd();
+    while (true) {
+        char* command = uart_com();
+        printf("%s", command);
+        set_servo(comp, atoi(command));
+        servo_movement = atoi(command);
+    }
 }
