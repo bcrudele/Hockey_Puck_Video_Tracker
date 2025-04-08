@@ -668,7 +668,9 @@ void timer_callback(void* arg) {
             
             //         // Update SERVO variable display (below LOCK)
             draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "REC:", TEXT_COLOR, 2);
-            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 2), recording, TEXT_COLOR, 2);
+            if (recording) { draw_text(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 2), "ON", GREEN, 2); }
+            else { draw_text(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 2), "OFF", RED, 2); }
+            // draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 2), recording, TEXT_COLOR, 2); // for basic 1/0 
 
             send_lines(spi, PARALLEL_LINES * 3, lines[calc_line]); // Only send the updated line
             frame++;
