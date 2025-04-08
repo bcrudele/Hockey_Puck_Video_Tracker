@@ -766,8 +766,8 @@ void timer_callback(void* arg) {
     }
 
     // Update the variables
-    if (lock) { lock = false; }
-    else { lock = true; }
+    // if (lock) { lock = false; }
+    // else { lock = true; }
     // system_runtime++;
     // system_temp++;
 }
