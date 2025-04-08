@@ -442,124 +442,6 @@ static void send_line_finish(spi_device_handle_t spi)
     }
 }
 
-
-//Simple routine to generate some patterns and send them to the LCD. Don't expect anything too
-//impressive. Because the SPI driver handles transactions in the background, we can calculate the next line
-//while the previous one is being sent.
-// static void display_pretty_colors(spi_device_handle_t spi)
-// {
-//     uint16_t *lines[2];
-//     //Allocate memory for the pixel buffers
-//     for (int i=0; i<2; i++) {
-//         lines[i]=heap_caps_malloc(320*PARALLEL_LINES*sizeof(uint16_t), MALLOC_CAP_DMA);
-//         assert(lines[i]!=NULL);
-//     }
-//     int frame=0;
-//     //Indexes of the line currently being sent to the LCD and the line we're calculating.
-//     int sending_line=-1;
-//     int calc_line=0;
-
-//     while(1) {
-//         frame++;
-//         for (int y=0; y<240; y+=PARALLEL_LINES) {
-//             //Calculate a line.
-//             pretty_effect_calc_lines(lines[calc_line], y, frame, PARALLEL_LINES);
-//             //Finish up the sending process of the previous line, if any
-//             if (sending_line!=-1) send_line_finish(spi);
-//             //Swap sending_line and calc_line
-//             sending_line=calc_line;
-//             calc_line=(calc_line==1)?0:1;
-//             //Send the line we currently calculated.
-//             send_lines(spi, y, lines[sending_line]);
-//             //The line set is queued up for sending now; the actual sending happens in the
-//             //background. We can go on to calculate the next line set as long as we do not
-//             //touch line[sending_line]; the SPI sending process is still reading from that.
-//         }
-//     }
-// }
-
-// static void display_gui(spi_device_handle_t spi) {
-//     uint16_t *lines[2];
-//     for (int i = 0; i < 2; i++) {
-//         lines[i] = heap_caps_malloc(320 * PARALLEL_LINES * sizeof(uint16_t), MALLOC_CAP_DMA);
-//         assert(lines[i] != NULL);
-//     }
-//     int spacing = GUI_HEIGHT / GUI_VARS;
-//     int sending_line = -1;
-//     int calc_line = 0;
-//     bool lock = false;
-//     int servo_movement = 0;
-//     bool recording = false;
-//     int system_temp = 0;
-//     int frame = 0;
-
-//     // esp_timer_handle_t timer_handle;
-//     // esp_timer_create_args_t timer_args = {
-//     //     .callback = &timer_callback,
-//     //     .name = "my_timer"
-//     // };
-
-//     // ESP_ERROR_CHECK(esp_timer_create(&timer_args, &timer_handle));
-//     // ESP_ERROR_CHECK(esp_timer_start_periodic(timer_handle, timer_interval_us));
-
-//     while (1) {
-//         frame++;
-//         for (int y = 0; y < 240; y += PARALLEL_LINES) {
-//             // Clear the buffer
-//             for (int i = 0; i < 320 * PARALLEL_LINES; i++) {
-//                 lines[calc_line][i] = BACKGROUND_COLOR; // Black background
-//             }
-//             // pretty_effect_calc_lines(lines[calc_line], y, frame, PARALLEL_LINES); // background image
-//             // Draw GUI background
-//             draw_rectangle(lines[calc_line], GUI_X, GUI_Y, GUI_WIDTH, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
-//             draw_rectangle(lines[calc_line], GUI_X, GUI_Y, 2, GUI_HEIGHT, BORDER_COLOR); // left bar
-//             draw_rectangle(lines[calc_line], GUI_WIDTH, GUI_Y, 2, GUI_HEIGHT, BORDER_COLOR); // right bar
-//             if (y == PARALLEL_LINES * 0) {draw_rectangle(lines[calc_line], GUI_X, GUI_Y, GUI_WIDTH, 2, BORDER_COLOR); } // top bar }
-//             if (y == PARALLEL_LINES * 5) {draw_rectangle(lines[calc_line], GUI_X, GUI_HEIGHT-2, GUI_WIDTH, 2, BORDER_COLOR); } // bottom bar
-            
-            
-//             // Draw the changing number
-//             if (y == PARALLEL_LINES * 0) {
-//                 draw_text(lines[calc_line], GUI_NAME_OFFSET, 10, "ROLLER HOCKEY VIDEO TRACKER", TEXT_COLOR, 1);
-//             }
-//             else if (y == PARALLEL_LINES * 1) {
-//                 draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "LOCK:", TEXT_COLOR, 2);
-//                 if (lock) {draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "PAIRED", GREEN, 2);}
-//                 else {draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "LOST", RED, 2);}
-//             }
-//             else if (y == PARALLEL_LINES * 2) {
-//                 draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "SERVO:", TEXT_COLOR, 2);
-//                 draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 1, servo_movement, TEXT_COLOR, 2); // White number
-//             }
-//             else if (y == PARALLEL_LINES * 3) {
-//                 draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "REC:", TEXT_COLOR, 2);
-//                 draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 2, recording, TEXT_COLOR, 2); // White number
-//             }
-//             else if (y == PARALLEL_LINES * 4) {
-//                 draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TEMP:", TEXT_COLOR, 2);
-//                 draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 3, system_temp, TEXT_COLOR, 2); // White number
-//             }
-//             else if (y == PARALLEL_LINES * 5) {
-//                 draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TIME:", TEXT_COLOR, 2);
-//                 draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 4, system_runtime, TEXT_COLOR, 2); // White number
-//             }
-            
-
-//             if (sending_line != -1) send_line_finish(spi);
-//             sending_line = calc_line;
-//             calc_line = (calc_line == 1) ? 0 : 1;
-//             send_lines(spi, y, lines[sending_line]);
-//         }
-//         // lock = 0;
-//         if (lock) {lock = false;} 
-//         else {lock = true;}
-//         servo_movement++;
-//         // recording = 0;
-//         // system_temp = 0;
-//         // system_runtime = 0;
-//     }
-// }
-
 // Global variables for GUI updates
 int servo_movement = 0;
 bool lock = false;
@@ -789,7 +671,6 @@ void setup_periodic_timer(spi_device_handle_t spi) {
 
 void lcd(void)
 {
-    esp_err_t ret;
     spi_device_handle_t spi;
     spi_bus_config_t buscfg={
         .miso_io_num=PIN_NUM_MISO,
@@ -800,28 +681,24 @@ void lcd(void)
         .max_transfer_sz=PARALLEL_LINES*320*2+8
     };
     spi_device_interface_config_t devcfg={
-#ifdef CONFIG_LCD_OVERCLOCK
-        .clock_speed_hz=26*1000*1000,           //Clock out at 26 MHz
-#else
+        // .clock_speed_hz=26*1000*1000,        //Clock out at 26 MHz (overclock not needed for this project)
         .clock_speed_hz=10*1000*1000,           //Clock out at 10 MHz
-#endif
         .mode=0,                                //SPI mode 0
         .spics_io_num=PIN_NUM_CS,               //CS pin
         .queue_size=7,                          //We want to be able to queue 7 transactions at a time
         .pre_cb=lcd_spi_pre_transfer_callback,  //Specify pre-transfer callback to handle D/C line
     };
-    //Initialize the SPI bus
-    ret=spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO);
-    ESP_ERROR_CHECK(ret);
-    //Attach the LCD to the SPI bus
-    ret=spi_bus_add_device(LCD_HOST, &devcfg, &spi);
-    ESP_ERROR_CHECK(ret);
-    //Initialize the LCD
-    lcd_init(spi);
-    //Initialize the effect displayed
-    // ret=pretty_effect_init();
-    // ESP_ERROR_CHECK(ret);
+    
+    // Initialize the SPI bus
+    spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO);
 
+    // Attach the LCD to the SPI bus
+    spi_bus_add_device(LCD_HOST, &devcfg, &spi);
+
+    // Initialize the LCD
+    lcd_init(spi);
+
+    // allocate memory for line buffers,
     for (int i = 0; i < 2; i++) {
         if (lines[i] == NULL) {
             lines[i] = heap_caps_malloc(320 * PARALLEL_LINES * sizeof(uint16_t), MALLOC_CAP_DMA);
@@ -829,8 +706,5 @@ void lcd(void)
         }
     }
     
-
-    setup_periodic_timer(spi);
-    // display gui
-    //display_gui(spi);
+    setup_periodic_timer(spi); // setup timer to update screen at 1 Hz
 }
