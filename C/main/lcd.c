@@ -1,10 +1,9 @@
 /* SPI Master example
 
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
+   This example code is in the Public Domain
 
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
+   For senior design, this code was reworked to drive our LCD commands via SPI
+   https://github.com/espressif/esp-idf/blob/master/examples/peripherals/spi_master/lcd/main/spi_master_example_main.c 
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,31 +14,8 @@
 #include "esp_system.h"
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
-// #include "decode_image.h"
-// #include "pretty_effect.h"
 #include "esp_timer.h"
 #include "esp_log.h"
-
-// static const char *TAG = "timer_example";
-
-// static int64_t timer_interval_us = 1000000; // 1 second in microseconds
-// static int system_runtime = 0;
-
-// static void timer_callback(void *arg) {
-//     system_runtime++;
-//     ESP_LOGI(TAG, "my_var: %d", system_runtime);
-// }
-
-/*
- This code displays some fancy graphics on the 320x240 LCD on an ESP-WROVER_KIT board.
- This example demonstrates the use of both spi_device_transmit as well as
- spi_device_queue_trans/spi_device_get_trans_result and pre-transmit callbacks.
-
- Some info about the ILI9341/ST7789V: It has an C/D line, which is connected to a GPIO here. It expects this
- line to be low for a command and high for data. We use a pre-transmit callback here to control that
- line: every transaction has as the user-definable argument the needed state of the D/C line and just
- before the transaction is sent, the callback will set this line to the correct state.
-*/
 
 #define LCD_HOST    HSPI_HOST
 
@@ -55,7 +31,7 @@
 //To speed up transfers, every SPI transfer sends a bunch of lines. This define specifies how many. More means more memory use,
 //but less overhead for setting up / finishing transfers. Make sure 240 is dividable by this.
 #define PARALLEL_LINES 40  // this has to be the GUI_HEIGHT (240) // VARIABLES (include hello world)
-#define GUI_WIDTH 180       // backdrop for the numbers & text
+#define GUI_WIDTH 180       // backdrop width for the numbers & text
 #define GUI_HEIGHT 240
 #define GUI_X 0
 #define GUI_Y 0
@@ -63,7 +39,9 @@
 #define GUI_VAR_OFFSET 100
 #define GUI_NAME_OFFSET 10
 
-// 0x1234 turns into 0x3412
+// Critical note for colors:
+// 0x1234 turns into 0x3412 as bits are shifted,
+// thus the 16-bit hex codes below are converted before-hand
 #define BORDER_COLOR 0x0F0F
 #define TEXT_COLOR 0xFFFF
 #define BACKGROUND_COLOR 0x0000
@@ -134,7 +112,7 @@ void draw_char(uint16_t *buffer, int x, int y, char c, uint16_t color, int font_
                 }
             }
         }
-    } else if (c >= 'A' && c <= 'Z') { // Add support for uppercase letters
+    } else if (c >= 'A' && c <= 'Z') { 
         static const uint8_t letters[][7] = {
             {0x0E, 0x11, 0x1F, 0x11, 0x11, 0x00, 0x00}, // A
             {0x1F, 0x11, 0x1F, 0x11, 0x1F, 0x00, 0x00}, // B
@@ -259,13 +237,7 @@ DRAM_ATTR static const lcd_init_cmd_t ili_init_cmds[]={
     {0, {0}, 0xff},
 };
 
-/* Send a command to the LCD. Uses spi_device_polling_transmit, which waits
- * until the transfer is complete.
- *
- * Since command transactions are usually small, they are handled in polling
- * mode for higher speed. The overhead of interrupt transactions is more than
- * just waiting for the transaction to complete.
- */
+// for command sending,
 void lcd_cmd(spi_device_handle_t spi, const uint8_t cmd, bool keep_cs_active)
 {
     esp_err_t ret;
@@ -281,13 +253,7 @@ void lcd_cmd(spi_device_handle_t spi, const uint8_t cmd, bool keep_cs_active)
     assert(ret==ESP_OK);            //Should have had no issues.
 }
 
-/* Send data to the LCD. Uses spi_device_polling_transmit, which waits until the
- * transfer is complete.
- *
- * Since data transactions are usually small, they are handled in polling
- * mode for higher speed. The overhead of interrupt transactions is more than
- * just waiting for the transaction to complete.
- */
+// send data to the LCD, Uses spi_device_polling_transmit
 void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len)
 {
     esp_err_t ret;
@@ -301,64 +267,37 @@ void lcd_data(spi_device_handle_t spi, const uint8_t *data, int len)
     assert(ret==ESP_OK);            //Should have had no issues.
 }
 
-//This function is called (in irq context!) just before a transmission starts. It will
-//set the D/C line to the value indicated in the user field.
+// This function is called in lcd() spi setup
 void lcd_spi_pre_transfer_callback(spi_transaction_t *t)
 {
     int dc=(int)t->user;
     gpio_set_level(PIN_NUM_DC, dc);
 }
 
-uint32_t lcd_get_id(spi_device_handle_t spi)
-{
-    // When using SPI_TRANS_CS_KEEP_ACTIVE, bus must be locked/acquired
-    spi_device_acquire_bus(spi, portMAX_DELAY);
-
-    //get_id cmd
-    lcd_cmd(spi, 0x04, true);
-
-    spi_transaction_t t;
-    memset(&t, 0, sizeof(t));
-    t.length=8*3;
-    t.flags = SPI_TRANS_USE_RXDATA;
-    t.user = (void*)1;
-
-    esp_err_t ret = spi_device_polling_transmit(spi, &t);
-    assert( ret == ESP_OK );
-
-    // Release bus
-    spi_device_release_bus(spi);
-
-    return *(uint32_t*)t.rx_data;
-}
-
-//Initialize the display
+// Initialize the display
 void lcd_init(spi_device_handle_t spi)
 {
     int cmd=0;
     const lcd_init_cmd_t* lcd_init_cmds;
 
-    //Initialize non-SPI GPIOs
+    // Initialize non-SPI GPIOs
     gpio_config_t io_conf = {};
     io_conf.pin_bit_mask = ((1ULL<<PIN_NUM_DC) | (1ULL<<PIN_NUM_RST) | (1ULL<<PIN_NUM_BCKL));
     io_conf.mode = GPIO_MODE_OUTPUT;
     io_conf.pull_up_en = true;
     gpio_config(&io_conf);
 
-    //Reset the display
+    // Reset the display
     gpio_set_level(PIN_NUM_RST, 0);
     vTaskDelay(100 / portTICK_PERIOD_MS);
     gpio_set_level(PIN_NUM_RST, 1);
     vTaskDelay(100 / portTICK_PERIOD_MS);
 
-    //detect LCD type
-    uint32_t lcd_id = lcd_get_id(spi);
-
-    printf("LCD ID: %08"PRIx32"\n", lcd_id);
+    // start commands
     printf("LCD ILI9341 initialization.\n");
     lcd_init_cmds = ili_init_cmds;
 
-    //Send all the commands
+    // Send all the commands
     while (lcd_init_cmds[cmd].databytes!=0xff) {
         lcd_cmd(spi, lcd_init_cmds[cmd].cmd, false);
         lcd_data(spi, lcd_init_cmds[cmd].data, lcd_init_cmds[cmd].databytes&0x1F);
@@ -372,13 +311,6 @@ void lcd_init(spi_device_handle_t spi)
     // gpio_set_level(PIN_NUM_BCKL, 0); // we don't need this, we have the backlight always on
 }
 
-/* To send a set of lines we have to send a command, 2 data bytes, another command, 2 more data bytes and another command
- * before sending the line data itself; a total of 6 transactions. (We can't put all of this in just one transaction
- * because the D/C line needs to be toggled in the middle.)
- * This routine queues these commands up as interrupt transactions so they get
- * sent faster (compared to calling spi_device_transmit several times), and at
- * the mean while the lines for next transactions can get calculated.
- */
 static void send_lines(spi_device_handle_t spi, int ypos, uint16_t *linedata)
 {
     esp_err_t ret;
@@ -422,11 +354,6 @@ static void send_lines(spi_device_handle_t spi, int ypos, uint16_t *linedata)
         ret=spi_device_queue_trans(spi, &trans[x], portMAX_DELAY);
         assert(ret==ESP_OK);
     }
-
-    //When we are here, the SPI driver is busy (in the background) getting the transactions sent. That happens
-    //mostly using DMA, so the CPU doesn't have much to do here. We're not going to wait for the transaction to
-    //finish because we may as well spend the time calculating the next line. When that is done, we can call
-    //send_line_finish, which will wait for the transfers to be done and check their status.
 }
 
 
@@ -434,11 +361,9 @@ static void send_line_finish(spi_device_handle_t spi)
 {
     spi_transaction_t *rtrans;
     esp_err_t ret;
-    //Wait for all 6 transactions to be done and get back the results.
     for (int x=0; x<6; x++) {
         ret=spi_device_get_trans_result(spi, &rtrans, portMAX_DELAY);
         assert(ret==ESP_OK);
-        //We could inspect rtrans now if we received any info back. The LCD is treated as write-only, though.
     }
 }
 
@@ -452,12 +377,13 @@ int frame = 0;
 uint16_t *lines[2];
 
 void timer_callback(void* arg) {
-    spi_device_handle_t spi = (spi_device_handle_t)arg; // Retrieve SPI handle passed through 'arg'
-    
-    int spacing = GUI_HEIGHT / GUI_VARS;
-    int sending_line = -1;
+    spi_device_handle_t spi = (spi_device_handle_t)arg; // gets spi as arg
+
+    // sample code vars:
+    int sending_line = -1; 
     int calc_line = 0;
 
+    // to iterate system_runtime struct as hrs:mins:secs,
     system_runtime.seconds++;
     if (system_runtime.seconds == 60) {
         system_runtime.minutes++;
@@ -467,122 +393,117 @@ void timer_callback(void* arg) {
         system_runtime.hours++;
         system_runtime.minutes = 0;
     }
-    // Clear the buffer and draw GUI elements
+
+    // GUI commands and updates:
     for (int y = 0; y < 240; y += PARALLEL_LINES) {
         if (frame < 6) {
-        // Clear the buffer
-        for (int i = 0; i < 320 * PARALLEL_LINES; i++) {
-            lines[calc_line][i] = BACKGROUND_COLOR; // Black background
-        }
+            // Clear the buffer
+            for (int i = 0; i < 320 * PARALLEL_LINES; i++) {
+                lines[calc_line][i] = BACKGROUND_COLOR; // Black background
+            }
 
-        // Draw GUI background and elements
-        draw_rectangle(lines[calc_line], GUI_X, GUI_Y, GUI_WIDTH, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
-        draw_rectangle(lines[calc_line], GUI_X, GUI_Y, 2, GUI_HEIGHT, BORDER_COLOR); // Left bar
-        draw_rectangle(lines[calc_line], GUI_WIDTH, GUI_Y, 2, GUI_HEIGHT, BORDER_COLOR); // Right bar
-        if (y == PARALLEL_LINES * 0) draw_rectangle(lines[calc_line], GUI_X, GUI_Y, GUI_WIDTH, 2, BORDER_COLOR); // Top bar
-        if (y == PARALLEL_LINES * 5) draw_rectangle(lines[calc_line], GUI_X, GUI_HEIGHT-2, GUI_WIDTH, 2, BORDER_COLOR); // Bottom bar
-        
-        // Draw changing variables
-        if (y == PARALLEL_LINES * 0) {
-            draw_text(lines[calc_line], GUI_NAME_OFFSET, 10, "ROLLER HOCKEY VIDEO TRACKER", TEXT_COLOR, 1);
+            // Draw GUI background:
+            draw_rectangle(lines[calc_line], GUI_X, GUI_Y, GUI_WIDTH, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish background
+            draw_rectangle(lines[calc_line], GUI_X, GUI_Y, 2, GUI_HEIGHT, BORDER_COLOR); // Left bar
+            draw_rectangle(lines[calc_line], GUI_WIDTH, GUI_Y, 2, GUI_HEIGHT, BORDER_COLOR); // Right bar
+            if (y == PARALLEL_LINES * 0) draw_rectangle(lines[calc_line], GUI_X, GUI_Y, GUI_WIDTH, 2, BORDER_COLOR); // Top bar
+            if (y == PARALLEL_LINES * 5) draw_rectangle(lines[calc_line], GUI_X, GUI_HEIGHT-2, GUI_WIDTH, 2, BORDER_COLOR); // Bottom bar
+            
+            // Draw initial screen:
+            if (y == PARALLEL_LINES * 0) {
+                draw_text(lines[calc_line], GUI_NAME_OFFSET, 10, "ROLLER HOCKEY VIDEO TRACKER", TEXT_COLOR, 1);
+            }
+            else if (y == PARALLEL_LINES * 1) {
+                draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "LOCK:", TEXT_COLOR, 2);
+                if (lock) { draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "PAIRED", GREEN, 2); }
+                else { draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "LOST", RED, 2); }
+            }
+            else if (y == PARALLEL_LINES * 2) {
+                draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "SERVO:", TEXT_COLOR, 2);
+                draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 1, servo_movement, TEXT_COLOR, 2); 
+            }
+            else if (y == PARALLEL_LINES * 3) {
+                draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "REC:", TEXT_COLOR, 2);
+                draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 2, recording, TEXT_COLOR, 2); 
+            }
+            else if (y == PARALLEL_LINES * 4) {
+                draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TEMP:", TEXT_COLOR, 2);
+                draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 3, system_temp, TEXT_COLOR, 2); 
+            }
+            else if (y == PARALLEL_LINES * 5) {
+                draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TIME:", TEXT_COLOR, 2);
+                draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 4, system_runtime.seconds, TEXT_COLOR, 2); 
+            }
+            frame++;
+
+            // Send initial lines:,
+            if (sending_line != -1) send_line_finish(spi);
+            sending_line = calc_line;
+            calc_line = (calc_line == 1) ? 0 : 1;
+            send_lines(spi, y, lines[sending_line]);
         }
-        else if (y == PARALLEL_LINES * 1) {
-            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "LOCK:", TEXT_COLOR, 2);
-            if (lock) { draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "PAIRED", GREEN, 2); }
-            else { draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "LOST", RED, 2); }
-        }
-        else if (y == PARALLEL_LINES * 2) {
-            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "SERVO:", TEXT_COLOR, 2);
-            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 1, servo_movement, TEXT_COLOR, 2); // White number
-        }
-        else if (y == PARALLEL_LINES * 3) {
-            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "REC:", TEXT_COLOR, 2);
-            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 2, recording, TEXT_COLOR, 2); // White number
-        }
-        else if (y == PARALLEL_LINES * 4) {
-            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TEMP:", TEXT_COLOR, 2);
-            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 3, system_temp, TEXT_COLOR, 2); // White number
-        }
-        else if (y == PARALLEL_LINES * 5) {
-            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TIME:", TEXT_COLOR, 2);
-            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 4, system_runtime.seconds, TEXT_COLOR, 2); // White number
-        }
-        frame++;
-        // Send the lines to the display
-        if (sending_line != -1) send_line_finish(spi);
-        sending_line = calc_line;
-        calc_line = (calc_line == 1) ? 0 : 1;
-        send_lines(spi, y, lines[sending_line]);
-        }
-        else if (frame == 6){
+        else if (frame == 6){ // LOCK updates,
             calc_line = 0;
-            draw_rectangle(lines[calc_line], GUI_X+3, GUI_Y, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
-
-            // draw_text(lines[0], GUI_NAME_OFFSET, 0, "SERVO:", TEXT_COLOR, 2);
-            // draw_number(lines[0], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 1, servo_movement, TEXT_COLOR, 2); // White number
+            draw_rectangle(lines[calc_line], GUI_X+3, GUI_Y, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR);
 
             draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "LOCK:", TEXT_COLOR, 2);
             if (lock) { draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "PAIRED", GREEN, 2); }
             else { draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "LOST", RED, 2); }
-            send_lines(spi, PARALLEL_LINES, lines[0]); // Only send the updated line
+            send_lines(spi, PARALLEL_LINES, lines[0]); 
             frame++;
         }
-        else if (frame == 7) {
+        else if (frame == 7) { // SERVO updates,
             
             calc_line = 1;
-            draw_rectangle(lines[calc_line], GUI_X+3, PARALLEL_LINES * 1, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
+            draw_rectangle(lines[calc_line], GUI_X+3, PARALLEL_LINES * 1, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); 
             
-            //         // Update SERVO variable display (below LOCK)
             draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "SERVO:", TEXT_COLOR, 2);
             draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES, servo_movement, TEXT_COLOR, 2);
 
-            send_lines(spi, PARALLEL_LINES * 2, lines[calc_line]); // Only send the updated line
+            send_lines(spi, PARALLEL_LINES * 2, lines[calc_line]);
             frame++;
 
 
             vTaskDelay(pdMS_TO_TICKS(100)); // critical!
             
         }
-        else if (frame == 8) {
+        else if (frame == 8) { // REC. updates,
             
             calc_line = 0;
-            draw_rectangle(lines[calc_line], GUI_X+3, PARALLEL_LINES * 2, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
-            
-            //         // Update SERVO variable display (below LOCK)
+            draw_rectangle(lines[calc_line], GUI_X+3, PARALLEL_LINES * 2, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); 
+
             draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "REC:", TEXT_COLOR, 2);
             if (recording) { draw_text(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 2), "ON", GREEN, 2); }
             else { draw_text(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 2), "OFF", RED, 2); }
             // draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 2), recording, TEXT_COLOR, 2); // for basic 1/0 
 
-            send_lines(spi, PARALLEL_LINES * 3, lines[calc_line]); // Only send the updated line
+            send_lines(spi, PARALLEL_LINES * 3, lines[calc_line]); 
             frame++;
 
 
             vTaskDelay(pdMS_TO_TICKS(100)); // critical!
             
         }
-        else if (frame == 9) {
+        else if (frame == 9) { // TEMP updates,
             
             calc_line = 0;
-            draw_rectangle(lines[calc_line], GUI_X+3, PARALLEL_LINES * 3, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
+            draw_rectangle(lines[calc_line], GUI_X+3, PARALLEL_LINES * 3, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR);
             
-            //         // Update SERVO variable display (below LOCK)
             draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TEMP:", TEXT_COLOR, 2);
             draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 3), system_temp, TEXT_COLOR, 2);
 
-            send_lines(spi, PARALLEL_LINES * 4, lines[calc_line]); // Only send the updated line
+            send_lines(spi, PARALLEL_LINES * 4, lines[calc_line]);
             frame++;
 
 
             vTaskDelay(pdMS_TO_TICKS(100)); // critical!
             
         }
-        else if (frame == 10) {
+        else if (frame == 10) { // TIME updates,
             
             calc_line = 0;
-            draw_rectangle(lines[calc_line], GUI_X+3, PARALLEL_LINES * 4, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
+            draw_rectangle(lines[calc_line], GUI_X+3, PARALLEL_LINES * 4, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); 
             
-            //         // Update SERVO variable display (below LOCK)
             draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TIME:", TEXT_COLOR, 2);
             if (system_runtime.hours != 0) {
                 if (system_runtime.seconds < 10) {
@@ -632,28 +553,14 @@ void timer_callback(void* arg) {
                     draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 4), system_runtime.seconds, TEXT_COLOR, 2);
                 }
             } 
-            // else if (system_runtime.minutes != 0) {
-            //     draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 25, GUI_Y + (PARALLEL_LINES * 4), system_runtime.seconds, TEXT_COLOR, 2);
-            //     draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 0, GUI_Y + (PARALLEL_LINES * 4), system_runtime.minutes, TEXT_COLOR, 2);
-            // }
-            // else {
-            //     draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 4), system_runtime.seconds, TEXT_COLOR, 2);
-            // }
+
             draw_rectangle(lines[calc_line], GUI_X, GUI_HEIGHT-2, GUI_WIDTH, 2, BORDER_COLOR); // Bottom bar
-            send_lines(spi, PARALLEL_LINES * 5, lines[calc_line]); // Only send the updated line
-            frame = 6;
+            send_lines(spi, PARALLEL_LINES * 5, lines[calc_line]);
+            frame = 6; // go back to top frame
 
-
-            vTaskDelay(pdMS_TO_TICKS(100)); // critical!
-            
+            vTaskDelay(pdMS_TO_TICKS(100)); // critical!  
         }
     }
-
-    // Update the variables
-    // if (lock) { lock = false; }
-    // else { lock = true; }
-    // system_runtime++;
-    // system_temp++;
 }
 
 // Setup the periodic timer
@@ -661,12 +568,12 @@ void setup_periodic_timer(spi_device_handle_t spi) {
     esp_timer_handle_t timer_handle;
     esp_timer_create_args_t timer_args = {
         .callback = timer_callback,
-        .arg = (void*)spi,  // Pass 'spi' to the timer callback
+        .arg = (void*)spi,  // pass 'spi' to the timer callback
         .name = "gui_update_timer"
     };
 
-    ESP_ERROR_CHECK(esp_timer_create(&timer_args, &timer_handle));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(timer_handle, 1000000));  // 1 second interval (1000000 microseconds)
+    esp_timer_create(&timer_args, &timer_handle);
+    esp_timer_start_periodic(timer_handle, 1000000);  // 1 second interval (1000000 microseconds)
 }
 
 void lcd(void)
