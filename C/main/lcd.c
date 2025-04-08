@@ -20,15 +20,15 @@
 #include "esp_timer.h"
 #include "esp_log.h"
 
-static const char *TAG = "timer_example";
+// static const char *TAG = "timer_example";
 
-static int64_t timer_interval_us = 1000000; // 1 second in microseconds
-static int system_runtime = 0;
+// static int64_t timer_interval_us = 1000000; // 1 second in microseconds
+// static int system_runtime = 0;
 
-static void timer_callback(void *arg) {
-    system_runtime++;
-    ESP_LOGI(TAG, "my_var: %d", system_runtime);
-}
+// static void timer_callback(void *arg) {
+//     system_runtime++;
+//     ESP_LOGI(TAG, "my_var: %d", system_runtime);
+// }
 
 /*
  This code displays some fancy graphics on the 320x240 LCD on an ESP-WROVER_KIT board.
@@ -472,89 +472,170 @@ static void send_line_finish(spi_device_handle_t spi)
 //     }
 // }
 
-static void display_gui(spi_device_handle_t spi) {
-    uint16_t *lines[2];
-    for (int i = 0; i < 2; i++) {
-        lines[i] = heap_caps_malloc(320 * PARALLEL_LINES * sizeof(uint16_t), MALLOC_CAP_DMA);
-        assert(lines[i] != NULL);
-    }
+// static void display_gui(spi_device_handle_t spi) {
+//     uint16_t *lines[2];
+//     for (int i = 0; i < 2; i++) {
+//         lines[i] = heap_caps_malloc(320 * PARALLEL_LINES * sizeof(uint16_t), MALLOC_CAP_DMA);
+//         assert(lines[i] != NULL);
+//     }
+//     int spacing = GUI_HEIGHT / GUI_VARS;
+//     int sending_line = -1;
+//     int calc_line = 0;
+//     bool lock = false;
+//     int servo_movement = 0;
+//     bool recording = false;
+//     int system_temp = 0;
+//     int frame = 0;
+
+//     // esp_timer_handle_t timer_handle;
+//     // esp_timer_create_args_t timer_args = {
+//     //     .callback = &timer_callback,
+//     //     .name = "my_timer"
+//     // };
+
+//     // ESP_ERROR_CHECK(esp_timer_create(&timer_args, &timer_handle));
+//     // ESP_ERROR_CHECK(esp_timer_start_periodic(timer_handle, timer_interval_us));
+
+//     while (1) {
+//         frame++;
+//         for (int y = 0; y < 240; y += PARALLEL_LINES) {
+//             // Clear the buffer
+//             for (int i = 0; i < 320 * PARALLEL_LINES; i++) {
+//                 lines[calc_line][i] = BACKGROUND_COLOR; // Black background
+//             }
+//             // pretty_effect_calc_lines(lines[calc_line], y, frame, PARALLEL_LINES); // background image
+//             // Draw GUI background
+//             draw_rectangle(lines[calc_line], GUI_X, GUI_Y, GUI_WIDTH, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
+//             draw_rectangle(lines[calc_line], GUI_X, GUI_Y, 2, GUI_HEIGHT, BORDER_COLOR); // left bar
+//             draw_rectangle(lines[calc_line], GUI_WIDTH, GUI_Y, 2, GUI_HEIGHT, BORDER_COLOR); // right bar
+//             if (y == PARALLEL_LINES * 0) {draw_rectangle(lines[calc_line], GUI_X, GUI_Y, GUI_WIDTH, 2, BORDER_COLOR); } // top bar }
+//             if (y == PARALLEL_LINES * 5) {draw_rectangle(lines[calc_line], GUI_X, GUI_HEIGHT-2, GUI_WIDTH, 2, BORDER_COLOR); } // bottom bar
+            
+            
+//             // Draw the changing number
+//             if (y == PARALLEL_LINES * 0) {
+//                 draw_text(lines[calc_line], GUI_NAME_OFFSET, 10, "ROLLER HOCKEY VIDEO TRACKER", TEXT_COLOR, 1);
+//             }
+//             else if (y == PARALLEL_LINES * 1) {
+//                 draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "LOCK:", TEXT_COLOR, 2);
+//                 if (lock) {draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "PAIRED", GREEN, 2);}
+//                 else {draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "LOST", RED, 2);}
+//             }
+//             else if (y == PARALLEL_LINES * 2) {
+//                 draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "SERVO:", TEXT_COLOR, 2);
+//                 draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 1, servo_movement, TEXT_COLOR, 2); // White number
+//             }
+//             else if (y == PARALLEL_LINES * 3) {
+//                 draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "REC:", TEXT_COLOR, 2);
+//                 draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 2, recording, TEXT_COLOR, 2); // White number
+//             }
+//             else if (y == PARALLEL_LINES * 4) {
+//                 draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TEMP:", TEXT_COLOR, 2);
+//                 draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 3, system_temp, TEXT_COLOR, 2); // White number
+//             }
+//             else if (y == PARALLEL_LINES * 5) {
+//                 draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TIME:", TEXT_COLOR, 2);
+//                 draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 4, system_runtime, TEXT_COLOR, 2); // White number
+//             }
+            
+
+//             if (sending_line != -1) send_line_finish(spi);
+//             sending_line = calc_line;
+//             calc_line = (calc_line == 1) ? 0 : 1;
+//             send_lines(spi, y, lines[sending_line]);
+//         }
+//         // lock = 0;
+//         if (lock) {lock = false;} 
+//         else {lock = true;}
+//         servo_movement++;
+//         // recording = 0;
+//         // system_temp = 0;
+//         // system_runtime = 0;
+//     }
+// }
+
+// Global variables for GUI updates
+int servo_movement = 0;
+bool lock = false;
+int recording = 0;
+int system_temp = 0;
+int system_runtime = 0;
+int frame = 0;
+uint16_t *lines[2];
+
+void timer_callback(void* arg) {
+    spi_device_handle_t spi = (spi_device_handle_t)arg; // Retrieve SPI handle passed through 'arg'
+    
     int spacing = GUI_HEIGHT / GUI_VARS;
     int sending_line = -1;
     int calc_line = 0;
-    bool lock = false;
-    int servo_movement = 0;
-    bool recording = false;
-    int system_temp = 0;
-    int frame = 0;
 
+    // Clear the buffer and draw GUI elements
+    for (int y = 0; y < 240; y += PARALLEL_LINES) {
+        // Clear the buffer
+        for (int i = 0; i < 320 * PARALLEL_LINES; i++) {
+            lines[calc_line][i] = BACKGROUND_COLOR; // Black background
+        }
+
+        // Draw GUI background and elements
+        draw_rectangle(lines[calc_line], GUI_X, GUI_Y, GUI_WIDTH, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
+        draw_rectangle(lines[calc_line], GUI_X, GUI_Y, 2, GUI_HEIGHT, BORDER_COLOR); // Left bar
+        draw_rectangle(lines[calc_line], GUI_WIDTH, GUI_Y, 2, GUI_HEIGHT, BORDER_COLOR); // Right bar
+        if (y == PARALLEL_LINES * 0) draw_rectangle(lines[calc_line], GUI_X, GUI_Y, GUI_WIDTH, 2, BORDER_COLOR); // Top bar
+        if (y == PARALLEL_LINES * 5) draw_rectangle(lines[calc_line], GUI_X, GUI_HEIGHT-2, GUI_WIDTH, 2, BORDER_COLOR); // Bottom bar
+        
+        // Draw changing variables
+        if (y == PARALLEL_LINES * 0) {
+            draw_text(lines[calc_line], GUI_NAME_OFFSET, 10, "ROLLER HOCKEY VIDEO TRACKER", TEXT_COLOR, 1);
+        }
+        else if (y == PARALLEL_LINES * 1) {
+            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "LOCK:", TEXT_COLOR, 2);
+            if (lock) { draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "PAIRED", GREEN, 2); }
+            else { draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "LOST", RED, 2); }
+        }
+        else if (y == PARALLEL_LINES * 2) {
+            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "SERVO:", TEXT_COLOR, 2);
+            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 1, servo_movement, TEXT_COLOR, 2); // White number
+        }
+        else if (y == PARALLEL_LINES * 3) {
+            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "REC:", TEXT_COLOR, 2);
+            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 2, recording, TEXT_COLOR, 2); // White number
+        }
+        else if (y == PARALLEL_LINES * 4) {
+            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TEMP:", TEXT_COLOR, 2);
+            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 3, system_temp, TEXT_COLOR, 2); // White number
+        }
+        else if (y == PARALLEL_LINES * 5) {
+            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TIME:", TEXT_COLOR, 2);
+            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 4, system_runtime, TEXT_COLOR, 2); // White number
+        }
+
+        // Send the lines to the display
+        if (sending_line != -1) send_line_finish(spi);
+        sending_line = calc_line;
+        calc_line = (calc_line == 1) ? 0 : 1;
+        send_lines(spi, y, lines[sending_line]);
+    }
+
+    // Update the variables
+    if (lock) { lock = false; }
+    else { lock = true; }
+    servo_movement++;
+    // Optionally, reset other variables like recording, temp, and runtime here
+}
+
+// Setup the periodic timer
+void setup_periodic_timer(spi_device_handle_t spi) {
     esp_timer_handle_t timer_handle;
     esp_timer_create_args_t timer_args = {
-        .callback = &timer_callback,
-        .name = "my_timer"
+        .callback = timer_callback,
+        .arg = (void*)spi,  // Pass 'spi' to the timer callback
+        .name = "gui_update_timer"
     };
 
     ESP_ERROR_CHECK(esp_timer_create(&timer_args, &timer_handle));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(timer_handle, timer_interval_us));
-
-    while (1) {
-        frame++;
-        for (int y = 0; y < 240; y += PARALLEL_LINES) {
-            // Clear the buffer
-            for (int i = 0; i < 320 * PARALLEL_LINES; i++) {
-                lines[calc_line][i] = BACKGROUND_COLOR; // Black background
-            }
-            // pretty_effect_calc_lines(lines[calc_line], y, frame, PARALLEL_LINES); // background image
-            // Draw GUI background
-            draw_rectangle(lines[calc_line], GUI_X, GUI_Y, GUI_WIDTH, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
-            draw_rectangle(lines[calc_line], GUI_X, GUI_Y, 2, GUI_HEIGHT, BORDER_COLOR); // left bar
-            draw_rectangle(lines[calc_line], GUI_WIDTH, GUI_Y, 2, GUI_HEIGHT, BORDER_COLOR); // right bar
-            if (y == PARALLEL_LINES * 0) {draw_rectangle(lines[calc_line], GUI_X, GUI_Y, GUI_WIDTH, 2, BORDER_COLOR); } // top bar }
-            if (y == PARALLEL_LINES * 5) {draw_rectangle(lines[calc_line], GUI_X, GUI_HEIGHT-2, GUI_WIDTH, 2, BORDER_COLOR); } // bottom bar
-            
-            
-            // Draw the changing number
-            if (y == PARALLEL_LINES * 0) {
-                draw_text(lines[calc_line], GUI_NAME_OFFSET, 10, "ROLLER HOCKEY VIDEO TRACKER", TEXT_COLOR, 1);
-            }
-            else if (y == PARALLEL_LINES * 1) {
-                draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "LOCK:", TEXT_COLOR, 2);
-                if (lock) {draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "PAIRED", GREEN, 2);}
-                else {draw_text(lines[calc_line], GUI_VAR_OFFSET, 0, "LOST", RED, 2);}
-            }
-            else if (y == PARALLEL_LINES * 2) {
-                draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "SERVO:", TEXT_COLOR, 2);
-                draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 1, servo_movement, TEXT_COLOR, 2); // White number
-            }
-            else if (y == PARALLEL_LINES * 3) {
-                draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "REC:", TEXT_COLOR, 2);
-                draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 2, recording, TEXT_COLOR, 2); // White number
-            }
-            else if (y == PARALLEL_LINES * 4) {
-                draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TEMP:", TEXT_COLOR, 2);
-                draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 3, system_temp, TEXT_COLOR, 2); // White number
-            }
-            else if (y == PARALLEL_LINES * 5) {
-                draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TIME:", TEXT_COLOR, 2);
-                draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 4, system_runtime, TEXT_COLOR, 2); // White number
-            }
-            
-
-            if (sending_line != -1) send_line_finish(spi);
-            sending_line = calc_line;
-            calc_line = (calc_line == 1) ? 0 : 1;
-            send_lines(spi, y, lines[sending_line]);
-        }
-        // lock = 0;
-        if (lock) {lock = false;} 
-        else {lock = true;}
-        servo_movement++;
-        // recording = 0;
-        // system_temp = 0;
-        // system_runtime = 0;
-    }
+    ESP_ERROR_CHECK(esp_timer_start_periodic(timer_handle, 1000000));  // 1 second interval (1000000 microseconds)
 }
-
-
 
 void lcd(void)
 {
@@ -591,6 +672,15 @@ void lcd(void)
     // ret=pretty_effect_init();
     // ESP_ERROR_CHECK(ret);
 
+    for (int i = 0; i < 2; i++) {
+        if (lines[i] == NULL) {
+            lines[i] = heap_caps_malloc(320 * PARALLEL_LINES * sizeof(uint16_t), MALLOC_CAP_DMA);
+            assert(lines[i] != NULL);
+        }
+    }
+    
+
+    setup_periodic_timer(spi);
     // display gui
-    display_gui(spi);
+    //display_gui(spi);
 }
