@@ -87,6 +87,12 @@ typedef enum {
     LCD_TYPE_MAX,
 } type_lcd_t;
 
+struct runtime_struct {
+    int hours;
+    int minutes;
+    int seconds;
+};
+
 void draw_rectangle(uint16_t *buffer, int x, int y, int width, int height, uint16_t color) {
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
@@ -559,7 +565,7 @@ int servo_movement = 0;
 bool lock = false;
 int recording = 0;
 int system_temp = 0;
-int system_runtime = 0;
+struct runtime_struct system_runtime; // TIME
 int frame = 0;
 uint16_t *lines[2];
 
@@ -570,6 +576,15 @@ void timer_callback(void* arg) {
     int sending_line = -1;
     int calc_line = 0;
 
+    system_runtime.seconds++;
+    if (system_runtime.seconds == 60) {
+        system_runtime.minutes++;
+        system_runtime.seconds = 0;
+    }
+    if (system_runtime.minutes == 60) {
+        system_runtime.hours++;
+        system_runtime.minutes = 0;
+    }
     // Clear the buffer and draw GUI elements
     for (int y = 0; y < 240; y += PARALLEL_LINES) {
         if (frame < 6) {
@@ -608,7 +623,7 @@ void timer_callback(void* arg) {
         }
         else if (y == PARALLEL_LINES * 5) {
             draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TIME:", TEXT_COLOR, 2);
-            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 4, system_runtime, TEXT_COLOR, 2); // White number
+            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES * 4, system_runtime.seconds, TEXT_COLOR, 2); // White number
         }
         frame++;
         // Send the lines to the display
@@ -640,6 +655,108 @@ void timer_callback(void* arg) {
             draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + PARALLEL_LINES, servo_movement, TEXT_COLOR, 2);
 
             send_lines(spi, PARALLEL_LINES * 2, lines[calc_line]); // Only send the updated line
+            frame++;
+
+
+            vTaskDelay(pdMS_TO_TICKS(100)); // critical!
+            
+        }
+        else if (frame == 8) {
+            
+            calc_line = 0;
+            draw_rectangle(lines[calc_line], GUI_X+3, PARALLEL_LINES * 2, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
+            
+            //         // Update SERVO variable display (below LOCK)
+            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "REC:", TEXT_COLOR, 2);
+            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 2), recording, TEXT_COLOR, 2);
+
+            send_lines(spi, PARALLEL_LINES * 3, lines[calc_line]); // Only send the updated line
+            frame++;
+
+
+            vTaskDelay(pdMS_TO_TICKS(100)); // critical!
+            
+        }
+        else if (frame == 9) {
+            
+            calc_line = 0;
+            draw_rectangle(lines[calc_line], GUI_X+3, PARALLEL_LINES * 3, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
+            
+            //         // Update SERVO variable display (below LOCK)
+            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TEMP:", TEXT_COLOR, 2);
+            draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 3), system_temp, TEXT_COLOR, 2);
+
+            send_lines(spi, PARALLEL_LINES * 4, lines[calc_line]); // Only send the updated line
+            frame++;
+
+
+            vTaskDelay(pdMS_TO_TICKS(100)); // critical!
+            
+        }
+        else if (frame == 10) {
+            
+            calc_line = 0;
+            draw_rectangle(lines[calc_line], GUI_X+3, PARALLEL_LINES * 4, GUI_WIDTH-3, GUI_HEIGHT, TEXT_BG_COLOR); // Blueish
+            
+            //         // Update SERVO variable display (below LOCK)
+            draw_text(lines[calc_line], GUI_NAME_OFFSET, 0, "TIME:", TEXT_COLOR, 2);
+            if (system_runtime.hours != 0) {
+                if (system_runtime.seconds < 10) {
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 65, GUI_Y + (PARALLEL_LINES * 4), system_runtime.seconds, TEXT_COLOR, 2);
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 50, GUI_Y + (PARALLEL_LINES * 4), 0, TEXT_COLOR, 2);
+                }
+                else {
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 45, GUI_Y + (PARALLEL_LINES * 4), system_runtime.seconds, TEXT_COLOR, 2);
+                }
+                if (system_runtime.minutes < 10) {
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 30, GUI_Y + (PARALLEL_LINES * 4), system_runtime.minutes, TEXT_COLOR, 2);
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 15, GUI_Y + (PARALLEL_LINES * 4), 0, TEXT_COLOR, 2);
+                } 
+                else{
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 10, GUI_Y + (PARALLEL_LINES * 4), system_runtime.minutes, TEXT_COLOR, 2);
+                }
+                if (system_runtime.hours < 10) {
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 4), system_runtime.hours, TEXT_COLOR, 2);
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET - 15, GUI_Y + (PARALLEL_LINES * 4), 0, TEXT_COLOR, 2);
+                }
+                else {
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET - 30, GUI_Y + (PARALLEL_LINES * 4), system_runtime.hours, TEXT_COLOR, 2);
+                }
+            }
+            else if (system_runtime.minutes != 0) {
+                if (system_runtime.seconds < 10) {
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 55, GUI_Y + (PARALLEL_LINES * 4), system_runtime.seconds, TEXT_COLOR, 2);
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 40, GUI_Y + (PARALLEL_LINES * 4), 0, TEXT_COLOR, 2);
+                }
+                else {
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 35, GUI_Y + (PARALLEL_LINES * 4), system_runtime.seconds, TEXT_COLOR, 2);
+                }
+                if (system_runtime.minutes < 10) {
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 20, GUI_Y + (PARALLEL_LINES * 4), system_runtime.minutes, TEXT_COLOR, 2);
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 5, GUI_Y + (PARALLEL_LINES * 4), 0, TEXT_COLOR, 2);
+                } 
+                else{
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 4), system_runtime.minutes, TEXT_COLOR, 2);
+                }
+            } 
+            else {
+                if (system_runtime.seconds < 10) {
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 15, GUI_Y + (PARALLEL_LINES * 4), system_runtime.seconds, TEXT_COLOR, 2);
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 4), 0, TEXT_COLOR, 2);
+                }
+                else {
+                    draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 4), system_runtime.seconds, TEXT_COLOR, 2);
+                }
+            } 
+            // else if (system_runtime.minutes != 0) {
+            //     draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 25, GUI_Y + (PARALLEL_LINES * 4), system_runtime.seconds, TEXT_COLOR, 2);
+            //     draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET + 0, GUI_Y + (PARALLEL_LINES * 4), system_runtime.minutes, TEXT_COLOR, 2);
+            // }
+            // else {
+            //     draw_number(lines[calc_line], GUI_X + GUI_VAR_OFFSET, GUI_Y + (PARALLEL_LINES * 4), system_runtime.seconds, TEXT_COLOR, 2);
+            // }
+            draw_rectangle(lines[calc_line], GUI_X, GUI_HEIGHT-2, GUI_WIDTH, 2, BORDER_COLOR); // Bottom bar
+            send_lines(spi, PARALLEL_LINES * 5, lines[calc_line]); // Only send the updated line
             frame = 6;
 
 
@@ -651,7 +768,8 @@ void timer_callback(void* arg) {
     // Update the variables
     if (lock) { lock = false; }
     else { lock = true; }
-    //servo_movement++;
+    // system_runtime++;
+    // system_temp++;
 }
 
 // Setup the periodic timer

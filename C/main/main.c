@@ -11,6 +11,9 @@
 void app_main(void) {
     uart_config();
     mcpwm_cmpr_handle_t comp = servo_init();
+    system_runtime.hours = 0;
+    system_runtime.minutes = 0;
+    system_runtime.seconds = -1;
     lcd();
     while (true) {
         char* command = uart_com();
