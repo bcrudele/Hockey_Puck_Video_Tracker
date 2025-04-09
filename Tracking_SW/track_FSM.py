@@ -43,46 +43,4 @@ class BallTrackerFSM:
 
         self.frame_count += 1
 
-    def track_ball_hsv(self, frame):
-        # Pseudocode for HSV thresholding
-        # convert to HSV, threshold orange, return mask
-        return mask
-
-    def mask_valid(self, mask):
-        # Check contour area or non-zero pixel count
-        return True or False
-
-    def run_yolo(self, frame):
-        # Run YOLOv5 or pre-trained model to detect people
-        return detections
-
-    def control_camera_with_mask(self, mask):
-        # Calculate center of mask and send servo command
-        pass
-
-    def control_camera_with_yolo(self, detections):
-        # Average person positions, send tracking command
-        pass
-
-# Example usage
-def main():
-    cap = cv2.VideoCapture(0)
-    tracker = BallTrackerFSM()
-
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        tracker.process_frame(frame)
-
-        # Optional: show frame with overlays
-        cv2.imshow("Tracking", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    main()
+    
