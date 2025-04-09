@@ -54,6 +54,8 @@ class trackHSV():
                         print("move left")
                     self.direction[0] = cx < self.width_upper_bound # right
                     self.direction[1] = 0
+            return True
+        return False
 
     def run(self):
         while True:
