@@ -155,8 +155,8 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
         # prevent spam of the same angle,
         if angle != current_angle:
             current_angle = angle
-            # send command:
-            # send_command(angle)
+            send_command(angle)
+                
             print(f"Angle: {angle}") # for testing
 
         # debug terminal stuff: enable with [debug]
@@ -177,7 +177,7 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
 
 if __name__ == '__main__':
     # start operation:
-    video_path = './Tracking_SW/archive/faceoff.mov'
-    # video_path = 0
+    # video_path = './Tracking_SW/archive/faceoff.mov'
+    video_path = 0
     # video_path = './archive/faceoff.mov'
     process_video(video_path, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4)
