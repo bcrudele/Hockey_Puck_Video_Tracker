@@ -1,0 +1,30 @@
+Core Structure
+- QApplication: The main application object (`app = QApplication(sys.argv)`), required for any PyQt6 app.
+- QMainWindow: Main window container for managing central widgets (`MainApp` inherits from it).
+- QWidget: Base class for GUI elements. All custom windows (`StartWindow`, `InitWindow`, etc.) inherit from `StyledWindow`, which inherits `QWidget`.
+
+ Window Management
+- Window Switching: Handled manually via a `switch_window()` method in `MainApp`.
+  - Windows are swapped with `self.setCentralWidget(...)`.
+  - Keeps the navigation simple without using `QStackedWidget` (though that’s another common option).
+
+ Styling
+- Consistent Styling: 
+  - All custom windows inherit from `StyledWindow` which sets a global stylesheet for background, text color, and font.
+  - Button-specific styles are added with `.setStyleSheet(...)`.
+
+
+ Layout Management
+- QVBoxLayout: Used for vertical stacking of widgets like buttons and labels.
+  - Each window creates its layout and sets it using `.setLayout(layout)`.
+
+ Widget Types
+- QPushButton: Interactive buttons that trigger actions.
+- QLabel: Displays status messages or instructions.
+- QFileDialog: Opens a dialog to choose a file save location.
+
+ Signals and Slots
+- Signals connect to methods via `.clicked.connect(...)`.
+- Lambdas are used for passing arguments when connecting to functions:  
+  `self.begin_button.clicked.connect(lambda: self.switch_window("init"))`
+
