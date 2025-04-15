@@ -85,6 +85,34 @@ def determine_angle(angle, x_avg_list, width_lower_bound, width_upper_bound, cam
         
     return angle
 
+def process_frame(frame, model):
+    """
+    works for both camera and video input!
+    processes a SINGLE frame for unblocking representation
+    video_path: 0 for camera, or path to video file
+    """
+    # gather data,
+    results = model(frame, verbose=False)  # change verbose to True if you want model info per process (too much)
+    boxes = results[0].boxes    # get the boxes
+    labels = boxes.cls          # get labels
+    confidences = boxes.conf    # get confidence scores
+
+    # filter out non-person detections + store coordinates,
+    x_avg_list = [] # to store average x coordinate
+    for i in range(len(boxes)):
+        if labels[i] == 0:  # class 0 is person
+            x1, y1, x2, y2 = boxes.xyxy[i].cpu().numpy()            # get box coordinates
+            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 3)  # draw rect.
+            cv2.putText(frame, f"Person {i} Conf: {confidences[i]:.2f}", (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2) # add text
+            x_avg = round((x1 + x2) / 2, 2)                         # average x-coordinate of each person
+            x_avg_list.append(x_avg)
+            # print(f"Person {i} is at: {x_avg}")
+
+    # write to output,
+    box_render.write(frame)
+
+    return x_avg_list
+
 def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_skip=5, gui=True, debug=True, bound=0.1):
     """
     works for both camera and video input!
@@ -176,8 +204,64 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    # start operation:
-    # video_path = './Tracking_SW/archive/faceoff.mov'
-    video_path = 0
+    ## for tracking in blocking function:
+
+    # video_path = 0
     # video_path = './archive/faceoff.mov'
-    process_video(video_path, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4)
+    #process_video(video_path, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4) # this is blocking!
+
+    # for FSM unblocking,
+    ## for process frame: 
+
+    # load path (usually to camera)
+    # video_path = 0
+    video_path = './Tracking_SW/archive/faceoff.mov'
+
+    # load YOLO
+    model = YOLO("yolov5s.pt") # do this before FSM begins
+
+    # start video capture,
+    cap, width, height, fps = get_video_dims(video_path) # do this before the FSM begins
+    bound = 0.1 # threshold for how sensitive we want to change camera angle
+    current_angle = 90 # this will be adjusted and changing 
+    debug = True
+
+    # check if video is opened successfully,
+    if check_video(cap) == False:
+        print(f"Error: Couldn't open file.")
+    else:
+        # output processing video,
+        box_render = cv2.VideoWriter('box_render.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (int(width), int(height))) # with boxes (wont be needed)
+        original_film = cv2.VideoWriter('original_film.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (int(width), int(height))) # original video for footage saving
+
+        # set bounds for camera movement,
+        width_lower_bound, width_upper_bound = bound_set(width, bound)
+
+        ret, frame = cap.read()  # get the frame
+
+        if not ret:  # if video ends or fails to grab frame,
+            print("Failed to grab frame")
+        else:
+
+            original_film.write(frame)
+
+            x_avg_list = process_frame(frame, model)
+
+            angle = determine_angle(current_angle, x_avg_list, width_lower_bound, width_upper_bound, width)
+
+            # prevent spam of the same angle,
+            if angle != current_angle:
+                current_angle = angle
+                # send_command(angle)
+                    
+                print(f"Angle: {angle}") # for testing
+
+            # debug terminal stuff: enable with [debug]
+            if debug:
+                print_info(x_avg_list, width_lower_bound, width_upper_bound)
+
+            # when done with everything,
+            box_render.release() 
+            original_film.release()             
+            cap.release()
+            cv2.destroyAllWindows()
