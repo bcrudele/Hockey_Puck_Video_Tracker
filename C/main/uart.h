@@ -7,9 +7,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#define UART_PORT_NUM UART_NUM_1  // Using UART1
-#define UART_TX_PIN   8           // TX pin (not needed)
-#define UART_RX_PIN   7           // RX pin
+#define UART_PORT_NUM UART_NUM_0  // Using UART0 (was 1 for breakout board)
+#define UART_TX_PIN   1           // TX pin (not needed)
+#define UART_RX_PIN   3           // RX pin (for PCB)
 #define UART_BAUD     115200      // Baud rate
 #define BUF_SIZE      256         // Buffer size for UART
 
