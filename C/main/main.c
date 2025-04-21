@@ -1,5 +1,5 @@
 // Libraries Licensed and provided by Espressif Systems
-// Written by: Brandon Crudele, 2/26/2025
+// Written by: Brandon Crudele, 4/14/2025
 // Description: Main File
 
 #include <stdio.h>
@@ -9,6 +9,8 @@
 #include "servo.h"
 #include "lcd.c" // make this a header
 
+#define BLINK_GPIO 27 // ON LED
+
 // ledger:
 // 200 -> lock ON
 // 300 -> lock OFF
@@ -16,8 +18,18 @@
 // 500 -> recording OFF
 
 void app_main(void) {
+    // LED:
+    gpio_reset_pin(BLINK_GPIO);
+    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_level(BLINK_GPIO, 1); // turn on LED?
+
+    // UART:
     uart_config();
+
+    // SERVO:
     mcpwm_cmpr_handle_t comp = servo_init();
+
+    // LCD:
     system_runtime.hours = 0;
     system_runtime.minutes = 0;
     system_runtime.seconds = -1;
