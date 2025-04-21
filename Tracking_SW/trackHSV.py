@@ -11,7 +11,7 @@ class trackHSV():
         self.width_upper_bound = 0 + (self.bound * self.width)
         self.height_lower_bound = self.height - (self.bound * self.height)
         self.height_upper_bound = self.height + (self.bound * self.height)
-        self.orangeLower = HSV_lower # (5, 150, 150)
+        self.orangeLower = HSV_lower # (5, 150, 150) TODO how to adaptively change this based on distance 
         self.orangeUpper = HSV_upper # (15, 255, 255)
 
         self.history_size = 10

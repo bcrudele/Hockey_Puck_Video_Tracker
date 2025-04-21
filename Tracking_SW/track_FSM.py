@@ -7,6 +7,7 @@ import time
 STATE_HSV_TRACKING = "hsv_tracking"
 STATE_FALLBACK_YOLO = "fallback_yolo"
 
+# IDEA SOS: based on the distance of the ball from the camera (find the area of the moment), adaptively change hsv values depending on distance
 class BallTrackerFSM:
     def __init__(self):
         self.state = STATE_HSV_TRACKING
