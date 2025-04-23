@@ -11,7 +11,7 @@ class trackHSV():
         self.width_upper_bound = 0 + (self.bound * self.width)
         self.height_lower_bound = self.height - (self.bound * self.height)
         self.height_upper_bound = self.height + (self.bound * self.height)
-        self.orangeLower = HSV_lower # (5, 150, 150) TODO how to adaptively change this based on distance 
+        self.orangeLower = HSV_lower # (5, 150, 150)
         self.orangeUpper = HSV_upper # (15, 255, 255)
 
         self.history_size = 10
@@ -46,12 +46,12 @@ class trackHSV():
                 cv.putText(frame, f"({cx}, {cy})", (cx + 10, cy - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2) 
                 if (cx > self.width_lower_bound):
                     if (not self.direction[1]):
-                        print("move right")
+                        print("move right - HSV")
                     self.direction[0] = 0
                     self.direction[1] = cx > self.width_lower_bound # right
                 elif (cx < self.width_upper_bound):
                     if (not self.direction[0]):
-                        print("move left")
+                        print("move left - HSV")
                     self.direction[0] = cx < self.width_upper_bound # right
                     self.direction[1] = 0
             return True
@@ -67,9 +67,11 @@ class trackHSV():
             cv.imshow("Frame", frame)
             if cv.waitKey(1) & 0xFF == ord('q'):
                 break
+                # return True
             speed = self.calculate_speed()
         self.cap.release()
         cv.destroyAllWindows()
+        #return True
 
     def calculate_speed(self):
         if len(self.position_history) < 2:

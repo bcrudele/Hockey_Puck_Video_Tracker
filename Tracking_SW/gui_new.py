@@ -272,7 +272,6 @@ class RecordingWindow(StyledWindow):
         super().__init__()
         self.switch_window = switch_window
         self.setWindowTitle("Recording in Progress")
-
         layout = QVBoxLayout()
         self.stop_button = QPushButton("Stop Recording")
         self.stop_button.setFont(QFont("Arial", 14))
@@ -289,7 +288,7 @@ class RecordingWindow(StyledWindow):
         self.setLayout(layout)
 
         global LH, LS, LV, UH, US, UV
-
+        trackHSV.end = True
         tracker = switchtest.trackHSV(0, (LH, LS, LV), (UH, US, UV))
         tracker.run(1)
 

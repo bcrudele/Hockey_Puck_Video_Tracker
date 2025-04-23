@@ -125,6 +125,7 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
     debug: print general info (toggled with debug)
     """
     global LH, LS, LV, UH, US, UV
+    global cap, box_render, original_film
 
     # load YOLO
     model = YOLO(model)
@@ -201,76 +202,21 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
             #if cv2.waitKey(1) & 0xFF == ord('q'):  # exit gui
             if cv2.waitKey(1) & frame_count >= 150:
                 tracker = trackHSV(0, (LH, LS, LV), (UH, US, UV))
-                tracker.run(0)
+                tracker.run(0, 0)
     
     # release everything,
     box_render.release() 
     original_film.release()             
     cap.release()
-    cv2.destroyAllWindows()
+    #cv2.destroyWindow("Video Processing")
 
-if __name__ == '__main__':
-    ## for tracking in blocking function:
+def killPPL():
+    global cap, box_render, original_film
 
-    # video_path = 0
-    # video_path = './archive/faceoff.mov'
-    #process_video(video_path, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4) # this is blocking!
-
-    # for FSM unblocking,
-    ## for process frame: 
-
-    # load path (usually to camera)
-    # video_path = 0
-    video_path = './Tracking_SW/archive/faceoff.mov'
-
-    # load YOLO
-    model = YOLO("yolov5s.pt") # do this before FSM begins
-
-    # start video capture,
-    cap, width, height, fps = get_video_dims(video_path) # do this before the FSM begins
-    bound = 0.1 # threshold for how sensitive we want to change camera angle
-    current_angle = 90 # this will be adjusted and changing 
-    debug = True
-
-    # check if video is opened successfully,
-    if check_video(cap) == False:
-        print(f"Error: Couldn't open file.")
-    else:
-        # output processing video,
-        box_render = cv2.VideoWriter('box_render.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (int(width), int(height))) # with boxes (wont be needed)
-        original_film = cv2.VideoWriter('original_film.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (int(width), int(height))) # original video for footage saving
-
-        # set bounds for camera movement,
-        width_lower_bound, width_upper_bound = bound_set(width, bound)
-
-        ret, frame = cap.read()  # get the frame
-
-        if not ret:  # if video ends or fails to grab frame,
-            print("Failed to grab frame")
-        else:
-
-            original_film.write(frame)
-
-            x_avg_list = process_frame(frame, model)
-
-            angle = determine_angle(current_angle, x_avg_list, width_lower_bound, width_upper_bound, width)
-
-            # prevent spam of the same angle,
-            if angle != current_angle:
-                current_angle = angle
-                # send_command(angle)
-                    
-                print(f"Angle: {angle}") # for testing
-
-            # debug terminal stuff: enable with [debug]
-            if debug:
-                print_info(x_avg_list, width_lower_bound, width_upper_bound)
-
-            # when done with everything,
-            box_render.release() 
-            original_film.release()             
-            cap.release()
-            cv2.destroyAllWindows()
+    box_render.release() 
+    original_film.release()             
+    cap.release()
+    cv2.destroyWindow("Video Processing")
 
 class trackHSV():
     def __init__(self, camera_idx, HSV_lower, HSV_upper):
@@ -335,12 +281,12 @@ class trackHSV():
             return True
         return False
 
-    def run(self, first):
+    def run(self, first, end):
         failCount = 0
         startCount = 0
         switch = 0
         initCheck = 0
-        while True:
+        while not end:
             ret, frame = self.cap.read()
             if not ret:
                 print("Error: Could not read frame.")
@@ -374,10 +320,12 @@ class trackHSV():
             if (cv2.waitKey(1) and switch):
                 process_video(0, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4)
             #if cv2.waitKey(1) & 0xFF == ord('q'):  # exit gui
-            #    process_video(0, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4)
+            #    break
+            if (cv2.waitKey(1) and end):
+                break
             speed = self.calculate_speed()
         self.cap.release()
-        cv.destroyAllWindows()
+        #cv.destroyWindow("Frame")
 
     def calculate_speed(self):
         if len(self.position_history) < 2:
@@ -393,11 +341,7 @@ class trackHSV():
 
         #print(speeds)
         return np.mean(speeds) if speeds else 0.0
-
-if __name__ == '__main__':
-    user_input = input("Please enter something: ")
-    if (user_input == "1"):
-        tracker = trackHSV(0, (5, 150, 150), (15, 255, 255))
-        tracker.run(1)
-    elif (user_input == "0"):
-        process_video(0, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4)
+    
+    def killHSV(self):
+        self.cap.release()
+        #cv.destroyWindow("Frame")
