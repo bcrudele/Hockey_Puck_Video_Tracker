@@ -331,7 +331,8 @@ class MainApp(QMainWindow):
         elif window_name == "test":
             self.setCentralWidget(VerifyInitWindow(self.switch_window))             #run the tracking to just verify the init
 
-app = QApplication(sys.argv)
-main_window = MainApp()
-main_window.show()
-app.exec()
+def run_gui():
+    app = QApplication(sys.argv)
+    main_window = MainApp()
+    main_window.show()
+    app.exec()
