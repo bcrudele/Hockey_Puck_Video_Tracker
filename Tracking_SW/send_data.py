@@ -9,3 +9,15 @@ def send_command(angle):
     ser.write(f"{angle}\n".encode())
         #response = ser.readline().decode().strip()
         #print("ESP32 Response:", response)
+
+
+def lcd_set(status):
+    if status == "locked_on":
+        send_command(200)
+    elif status == "locked_off":
+        send_command(300)
+    elif status == "recording_on":
+        send_command(400)
+    elif status  == "recodirng_off":
+        send_command(500)
+    
