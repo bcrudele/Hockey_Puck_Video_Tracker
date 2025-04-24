@@ -59,20 +59,32 @@ class trackHSV():
         return False
 
     def run(self):
+        angle = 90  # start at center
+        frame_count = 0
         while True:
             ret, frame = self.cap.read()
+            frame_count += 1
             if not ret:
                 print("Error: Could not read frame.")
                 break
-            self.process_frame(frame)
+
+            found = self.process_frame(frame)
+            if found:
+                new_angle = self.determine_angle(angle)
+                if new_angle != angle and frame_count % 5 == 0:  # send command every 5 frames
+                    angle = new_angle
+                    # print(f"Sending angle: {angle}")
+                    send_command(angle)
+
+
             cv.imshow("Frame", frame)
             if cv.waitKey(1) & 0xFF == ord('q'):
                 break
-                # return True
-            speed = self.calculate_speed()
+
         self.cap.release()
         cv.destroyAllWindows()
         return True
+
 
     def calculate_speed(self):
         if len(self.position_history) < 2:
@@ -89,50 +101,49 @@ class trackHSV():
         #print(speeds)
         return np.mean(speeds) if speeds else 0.0
     
-# logic woot
-# 1. find average x pos
+
 
     def find_average_x_pos(self):
-        x_avg = 0
-        for i in range(len(self.position_history)):
-            if self.position_history[i] > 0:
-                x_avg_list[i] = round(sum(self.x_avg_list) / len(self.x_avg_list),2)
-        return x_avg
+        if not self.position_history:
+            return None
+        x_vals = [x for x, _ in self.position_history]
+        return sum(x_vals) / len(x_vals)
+
     
 
-    def determine_angle(self, angle, x_avg_list, width_lower_bound, width_upper_bound, cam_width):
-        if len(x_avg_list) != 0:
-            average_x =  self.find_average_x_pos()# average x pos of ball
-            zone = (cam_width - width_lower_bound) // 3 # each speed zone
-            Rzone0 = width_lower_bound
-            Rzone1 = Rzone0 + zone 
-            Rzone2 = Rzone1 + zone
-            Lzone0 = width_upper_bound
-            Lzone1 = Lzone0 - zone 
-            Lzone2 = Lzone1 - zone
-            if (Rzone1 > average_x > Rzone0):
-                print("RZONE0")
-                angle = angle - 2
-            elif (Rzone2 > average_x > Rzone1):
-                print("RZONE1")
-                angle = angle - 5
-            elif (average_x > Rzone2):
-                print("RZONE2")
-                angle = angle - 10
-            elif (Lzone1 < average_x < Lzone0):
-                print("LZONE0")
-                angle = angle + 2
-            elif (Lzone2 < average_x < Lzone1):
-                print("LZONE1")
-                angle = angle + 5
-            elif (average_x < Lzone2):
-                print("LZONE2")
-                angle = angle + 10
+    def determine_angle(self, current_angle):
+        average_x = self.find_average_x_pos()
+        if average_x is None:
+            return current_angle
+        
+        zone = (self.width - self.width_lower_bound) // 3
+        Rzone0 = self.width_lower_bound
+        Rzone1 = Rzone0 + zone 
+        Rzone2 = Rzone1 + zone
+        Lzone0 = self.width_upper_bound
+        Lzone1 = Lzone0 - zone 
+        Lzone2 = Lzone1 - zone
 
-            # dont over-correct:
-            if angle > 180:
-                angle = 180
-            elif angle < 0:
-                angle = 0
-            
-        return angle
+        if Rzone0 < average_x < Rzone1:
+            # print("RZONE0")
+            current_angle -= 2
+        elif Rzone1 < average_x < Rzone2:
+            # print("RZONE1")
+            current_angle -= 5
+        elif average_x > Rzone2:
+            # print("RZONE2")
+            current_angle -= 10
+        elif Lzone1 < average_x < Lzone0:
+            # print("LZONE0")
+            current_angle += 2
+        elif Lzone2 < average_x < Lzone1:
+            # print("LZONE1")
+            current_angle += 5
+        elif average_x < Lzone2:
+            # print("LZONE2")
+            current_angle += 10
+
+        return max(0, min(180, current_angle))
+
+track = trackHSV(0, (5, 150, 150), (15, 255, 255))
+track.run()

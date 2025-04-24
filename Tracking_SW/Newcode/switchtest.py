@@ -394,10 +394,13 @@ class trackHSV():
         #print(speeds)
         return np.mean(speeds) if speeds else 0.0
 
-if __name__ == '__main__':
-    user_input = input("Please enter something: ")
-    if (user_input == "1"):
-        tracker = trackHSV(0, (5, 150, 150), (15, 255, 255))
-        tracker.run(0)
-    elif (user_input == "0"):
-        process_video(0, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4)
+# if __name__ == '__main__':
+#     user_input = input("Please enter something: ")
+#     if (user_input == "1"):
+#         tracker = trackHSV(0, (5, 150, 150), (15, 255, 255))
+#         tracker.run(0)
+#     elif (user_input == "0"):
+#         process_video(0, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4)
+
+tracker = trackHSV(1, (5, 150, 150), (15, 255, 255))
+tracker.run(0)
