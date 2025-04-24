@@ -46,14 +46,16 @@ class trackHSV():
                 cv.putText(frame, f"({cx}, {cy})", (cx + 10, cy - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2) 
                 if (cx > self.width_lower_bound):
                     if (not self.direction[1]):
-                        print("move right")
+                        print("move right - HSV")
                     self.direction[0] = 0
                     self.direction[1] = cx > self.width_lower_bound # right
                 elif (cx < self.width_upper_bound):
                     if (not self.direction[0]):
-                        print("move left")
+                        print("move left - HSV")
                     self.direction[0] = cx < self.width_upper_bound # right
                     self.direction[1] = 0
+            return True
+        return False
 
     def run(self):
         while True:
@@ -65,8 +67,11 @@ class trackHSV():
             cv.imshow("Frame", frame)
             if cv.waitKey(1) & 0xFF == ord('q'):
                 break
+                # return True
+            speed = self.calculate_speed()
         self.cap.release()
         cv.destroyAllWindows()
+        #return True
 
     def calculate_speed(self):
         if len(self.position_history) < 2:
@@ -75,10 +80,12 @@ class trackHSV():
         for i in range(1, len(self.position_history)):
             x1, y1 = self.position_history[i - 1]
             x2, y2 = self.position_history[i]
-            distance = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-            speeds.append(distance)
-            
-        print(speeds)
+            distancex = np.abs(x2 - x1)
+            distancey = np.abs(y2 - y1)
+            distance2d = np.sqrt(distancex ** 2 + distancey ** 2) # not sure if need bc we are only traveling in x direction
+            speeds.append(distancex)
+
+        #print(speeds)
         return np.mean(speeds) if speeds else 0.0
     
         
