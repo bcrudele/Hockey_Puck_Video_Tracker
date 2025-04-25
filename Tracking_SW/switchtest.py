@@ -370,7 +370,7 @@ class trackHSV():
                         angle = nangle
                         send_command(nangle)
                         #process_video(1, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4)
-                    if cv2.waitKey(1) & frame_count >= 50:
+                    if cv2.waitKey(1) & frame_count >= 75:
                         PPL = 0
                         switch = 0
                         frame_count = 0
