@@ -3,7 +3,7 @@ import cv2 as cv
 from collections import deque
 import cv2
 from ultralytics import YOLO  # pip install ultralytics
-from send_data import send_command # to send serial data
+from send_data import * # to send serial data
 def print_info(x_avg_list, width_lower_bound, width_upper_bound):
     """
     Prints:
@@ -220,6 +220,8 @@ def killPPL():
     #box_render.release() 
     #original_film.release()             
     #cap.release()
+    lcd_set("recording_off")
+    lcd_set("locked_off")
     writer.release()
     cv2.destroyWindow("PPL")
 
@@ -305,6 +307,7 @@ class trackHSV():
                     30,
                     (int(self.width), int(self.height))
                 )
+        lcd_set("recording_on")
         while not end:
             ret, frame = self.cap.read()
             frame_count += 1
@@ -329,6 +332,7 @@ class trackHSV():
             if startCount == 0 and initCheck >= 20:
                 startCount = 1
                 print("Started counting failures.")
+                lcd_set("locked_on")
             elif found and startCount == 1:
                 failCount = 0
                 speed = self.calculate_speed()
@@ -348,6 +352,7 @@ class trackHSV():
                 PPL = 1
             if (cv2.waitKey(1) and switch):
                 frame_count = 0
+                lcd_set("locked_off")
                 while PPL:
                     ret, frame = self.cap.read()
 
@@ -370,6 +375,7 @@ class trackHSV():
                         switch = 0
                         frame_count = 0
                         failCount = 0
+                        lcd_set("locked_on")
             
             if (cv2.waitKey(1) and end):
                 break
