@@ -3,7 +3,7 @@ import cv2 as cv
 from collections import deque
 import cv2
 from ultralytics import YOLO  # pip install ultralytics
-#from send_data import send_command # to send serial data
+from send_data import send_command # to send serial data
 def print_info(x_avg_list, width_lower_bound, width_upper_bound):
     """
     Prints:
@@ -62,22 +62,22 @@ def determine_angle(angle, x_avg_list, width_lower_bound, width_upper_bound, cam
         Lzone2 = Lzone1 - zone
         if (Rzone1 > average_x > Rzone0):
             print("RZONE0")
-            angle = angle - 2
+            angle = angle - 4
         elif (Rzone2 > average_x > Rzone1):
             print("RZONE1")
-            angle = angle - 5
+            angle = angle - 7
         elif (average_x > Rzone2):
             print("RZONE2")
-            angle = angle - 10
+            angle = angle - 12
         elif (Lzone1 < average_x < Lzone0):
             print("LZONE0")
-            angle = angle + 2
+            angle = angle + 4
         elif (Lzone2 < average_x < Lzone1):
             print("LZONE1")
-            angle = angle + 5
+            angle = angle + 7
         elif (average_x < Lzone2):
             print("LZONE2")
-            angle = angle + 10
+            angle = angle + 12
 
         # dont over-correct:
         if angle > 180:
@@ -104,14 +104,14 @@ def process_frame(frame, model):
     for i in range(len(boxes)):
         if labels[i] == 0:  # class 0 is person
             x1, y1, x2, y2 = boxes.xyxy[i].cpu().numpy()            # get box coordinates
-            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 3)  # draw rect.
-            cv2.putText(frame, f"Person {i} Conf: {confidences[i]:.2f}", (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2) # add text
+            #cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 3)  # draw rect.
+            #cv2.putText(frame, f"Person {i} Conf: {confidences[i]:.2f}", (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2) # add text
             x_avg = round((x1 + x2) / 2, 2)                         # average x-coordinate of each person
             x_avg_list.append(x_avg)
             # print(f"Person {i} is at: {x_avg}")
 
     # write to output,
-    box_render.write(frame)
+    #box_render.write(frame)
 
     return x_avg_list
 
@@ -139,14 +139,15 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
         return
     
     # output processing video,
-    box_render = cv2.VideoWriter('box_render.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps//frame_skip, (int(width), int(height)))
-    original_film = cv2.VideoWriter('original_film.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (int(width), int(height)))
+    # box_render = cv2.VideoWriter('box_render.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps//frame_skip, (int(width), int(height)))
+    # original_film = cv2.VideoWriter('original_film.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, (int(width), int(height)))
 
     # set bounds for camera movement,
     width_lower_bound, width_upper_bound = bound_set(width, bound)
 
     frame_count = 0
-    current_angle = 90 # start at this angle
+    global angle
+    #current_angle = 90 # start at this angle
     while True:
         ret, frame = cap.read()  # get the frame
 
@@ -181,27 +182,27 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
 
         # write to output,
         box_render.write(frame)
-        '''
+        
         # calculate new angle
-        angle = determine_angle(current_angle, x_avg_list, width_lower_bound, width_upper_bound, width)
+        nangle = determine_angle(angle, x_avg_list, width_lower_bound, width_upper_bound, width)
 
         # prevent spam of the same angle,
-        if angle != current_angle:
-            current_angle = angle
-            send_command(angle)
+        if nangle != angle:
+            angle = nangle
+            send_command(nangle)
                 
-            print(f"Angle: {angle}") # for testing
+            print(f"Angle: {nangle}") # for testing
 
         # debug terminal stuff: enable with [debug]
         if debug:
             print_info(x_avg_list, width_lower_bound, width_upper_bound)
-        '''
+        
         # debug gui: enable with [gui]
         if gui:
             cv2.imshow("Video Processing", frame)
             #if cv2.waitKey(1) & 0xFF == ord('q'):  # exit gui
             if cv2.waitKey(1) & frame_count >= 150:
-                tracker = trackHSV(0, (LH, LS, LV), (UH, US, UV))
+                tracker = trackHSV(1, (LH, LS, LV), (UH, US, UV))
                 tracker.run(0, 0)
     
     # release everything,
@@ -210,20 +211,24 @@ def process_video(video_path=0, model="yolov5s.pt", frame_skip_en=True, frame_sk
     cap.release()
     #cv2.destroyWindow("Video Processing")
 
-def killPPL():
-    global cap, box_render, original_film
+def runPPL():
+    a = 0
 
-    box_render.release() 
-    original_film.release()             
-    cap.release()
-    cv2.destroyWindow("Video Processing")
+def killPPL():
+    global cap, writer
+
+    #box_render.release() 
+    #original_film.release()             
+    #cap.release()
+    writer.release()
+    cv2.destroyWindow("PPL")
 
 class trackHSV():
     def __init__(self, camera_idx, HSV_lower, HSV_upper):
         self.cap = cv.VideoCapture(camera_idx)
         self.width = self.cap.get(cv.CAP_PROP_FRAME_WIDTH)
         self.height = self.cap.get(cv.CAP_PROP_FRAME_HEIGHT)
-        self.bound = 0.10
+        self.bound = 0.30
         self.width_lower_bound = self.width - (self.bound * self.width)
         self.width_upper_bound = 0 + (self.bound * self.width)
         self.height_lower_bound = self.height - (self.bound * self.height)
@@ -282,24 +287,40 @@ class trackHSV():
         return False
 
     def run(self, first, end):
+        global angle
+        if first:
+            model = YOLO("yolov5s.pt")
+            print("Setting initial angle.")
+            angle = 90
+            send_command(angle)
         failCount = 0
         startCount = 0
         switch = 0
         initCheck = 0
+        frame_count = 0
+        global writer
+        writer = cv2.VideoWriter(
+                    "footage.mp4",
+                    cv2.VideoWriter_fourcc(*'mp4v'),
+                    30,
+                    (int(self.width), int(self.height))
+                )
         while not end:
             ret, frame = self.cap.read()
+            frame_count += 1
+            writer.write(frame)
             if not ret:
                 print("Error: Could not read frame.")
                 break
-            valid = self.process_frame(frame)
+            found = self.process_frame(frame) # hsv proceess frame
             self.process_frame(frame)
             cv.imshow("Frame", frame)
 
             if (first):
-                if valid and startCount == 0:
+                if found and startCount == 0:
                     initCheck += 1
                     print("Init frames remaining: ", (20 - initCheck))
-                elif not valid and initCheck < 20:
+                elif not found and initCheck < 20:
                     initCheck = 0
                     print("init count reset")
             else:
@@ -308,23 +329,52 @@ class trackHSV():
             if startCount == 0 and initCheck >= 20:
                 startCount = 1
                 print("Started counting failures.")
-            elif valid and startCount == 1:
+            elif found and startCount == 1:
                 failCount = 0
+                speed = self.calculate_speed()
+                #print(speed)
                 print("Reset fail count.")
-            elif not valid and startCount == 1:
+                new_angle = self.determine_angle(angle, speed)
+                if new_angle != angle and frame_count % 5 == 0:  # send command every 5 frames
+                    angle = new_angle
+                    # print(f"Sending angle: {angle}")
+                    send_command(angle)
+            elif not found and startCount == 1:
                 print("Fail Count: ", failCount)
                 failCount += 1
             
             if (failCount >= 30):
                 switch = 1
+                PPL = 1
             if (cv2.waitKey(1) and switch):
-                process_video(0, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4)
-            #if cv2.waitKey(1) & 0xFF == ord('q'):  # exit gui
-            #    break
+                frame_count = 0
+                while PPL:
+                    ret, frame = self.cap.read()
+
+                    writer.write(frame)
+
+                    frame_count += 1
+                    if not ret:
+                        print("Error: Could not read frame.")
+                        break
+                    x_avg_list = process_frame(frame, model) #ppl process frame
+                    cv.imshow("PPL", frame)
+                    nangle = determine_angle(angle, x_avg_list, self.width_lower_bound, self.width_upper_bound, self.width)
+                    # prevent spam of the same angle,
+                    if nangle != angle:
+                        angle = nangle
+                        send_command(nangle)
+                        #process_video(1, frame_skip_en=True, frame_skip=3, gui=True, debug=False, bound=0.4)
+                    if cv2.waitKey(1) & frame_count >= 50:
+                        PPL = 0
+                        switch = 0
+                        frame_count = 0
+                        failCount = 0
+            
             if (cv2.waitKey(1) and end):
                 break
-            speed = self.calculate_speed()
         self.cap.release()
+
         #cv.destroyWindow("Frame")
 
     def calculate_speed(self):
@@ -342,6 +392,91 @@ class trackHSV():
         #print(speeds)
         return np.mean(speeds) if speeds else 0.0
     
+    def find_average_x_pos(self):
+        if not self.position_history:
+            return None
+        x_vals = [x for x, _ in self.position_history]
+        return sum(x_vals) / len(x_vals)
+    
+    def determine_angle(self, current_angle, speed):
+        average_x = self.find_average_x_pos()
+        if average_x is None:
+            return current_angle
+        
+        zone = (self.width - self.width_lower_bound) // 3
+        Rzone0 = self.width_lower_bound
+        Rzone1 = Rzone0 + zone 
+        Rzone2 = Rzone1 + zone
+        Lzone0 = self.width_upper_bound
+        Lzone1 = Lzone0 - zone 
+        Lzone2 = Lzone1 - zone
+
+        if speed < 5:
+            if Rzone0 < average_x < Rzone1:
+                # print("RZONE0")
+                current_angle -= 3
+            elif Rzone1 < average_x < Rzone2:
+                # print("RZONE1")
+                current_angle -= 6
+            elif average_x > Rzone2:
+                # print("RZONE2")
+                current_angle -= 11
+            elif Lzone1 < average_x < Lzone0:
+                # print("LZONE0")
+                current_angle += 3
+            elif Lzone2 < average_x < Lzone1:
+                # print("LZONE1")
+                current_angle += 6
+            elif average_x < Lzone2:
+                # print("LZONE2")
+                current_angle += 11
+
+        if speed >= 5:
+            if Rzone0 < average_x < Rzone1:
+                # print("RZONE0")
+                current_angle -= 4
+            elif Rzone1 < average_x < Rzone2:
+                # print("RZONE1")
+                current_angle -= 7
+            elif average_x > Rzone2:
+                # print("RZONE2")
+                current_angle -= 12
+            elif Lzone1 < average_x < Lzone0:
+                # print("LZONE0")
+                current_angle += 4
+            elif Lzone2 < average_x < Lzone1:
+                # print("LZONE1")
+                current_angle += 7
+            elif average_x < Lzone2:
+                # print("LZONE2")
+                current_angle += 12
+
+        if speed >= 10:
+            if Rzone0 < average_x < Rzone1:
+                # print("RZONE0")
+                current_angle -= 5
+            elif Rzone1 < average_x < Rzone2:
+                # print("RZONE1")
+                current_angle -= 8
+            elif average_x > Rzone2:
+                # print("RZONE2")
+                current_angle -= 13
+            elif Lzone1 < average_x < Lzone0:
+                # print("LZONE0")
+                current_angle += 5
+            elif Lzone2 < average_x < Lzone1:
+                # print("LZONE1")
+                current_angle += 8
+            elif average_x < Lzone2:
+                # print("LZONE2")
+                current_angle += 13
+
+        return max(0, min(180, current_angle))
+    
     def killHSV(self):
         self.cap.release()
         #cv.destroyWindow("Frame")
+
+if __name__ == "__main__":
+    tracker = trackHSV(0, (5, 230, 230), (15, 255, 255))
+    tracker.run(1, 0)

@@ -106,8 +106,8 @@ class InitWindow(StyledWindow):
         global LH, LS, LV, UH, US, UV
 
         LH = 5
-        LS = 150
-        LV = 150
+        LS = 230
+        LV = 230
         UH = 15
         US = 255
         UV = 255
@@ -199,8 +199,8 @@ class InitFailWindow(StyledWindow):
         global LH, LS, LV, UH, US, UV
     
         LH = 5
-        LS = 150
-        LV = 150
+        LS = 230
+        LV = 230
         UH = 15
         US = 255
         UV = 255
@@ -331,8 +331,7 @@ class MainApp(QMainWindow):
         elif window_name == "test":
             self.setCentralWidget(VerifyInitWindow(self.switch_window))             #run the tracking to just verify the init
 
-def run_gui():
-    app = QApplication(sys.argv)
-    main_window = MainApp()
-    main_window.show()
-    app.exec()
+app = QApplication(sys.argv)
+main_window = MainApp()
+main_window.show()
+app.exec()
