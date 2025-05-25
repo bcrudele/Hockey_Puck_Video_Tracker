@@ -1,4 +1,5 @@
-# Roller Hockey Puck Video Tracker
+## Roller Hockey Puck Video Tracker
+# ECE477 Senior Design
 
 ![Banner](./images/banner.png)
 
